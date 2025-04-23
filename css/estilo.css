@@ -1,0 +1,345 @@
+/* === RESET Y VARIABLES BASE === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Colores base */
+  --background-color: #2F4F4F;     /* Fondo general */
+  --panel-bg: #3a4b52;             /* Fondo de paneles */
+  --text-color: #e0e0e0;           /* Texto claro */
+  --border-color: #708090;         /* Borde slate gray */
+  --accent-color: #90a4ae;         /* Acento */
+  
+  /* Botones y controles */
+  --button-bg: #546e7a;
+  --button-hover-bg: #455a64;
+  
+  --input-bg: #3a4b52;
+  --input-border: #708090;
+  
+  --control-bg: #455a64;
+  
+  /* Fuente principal */
+  --font-family: 'Ubuntu', sans-serif;
+}
+
+/* === ESTILOS GLOBALES === */
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-family);
+  line-height: 1.5;
+  padding: 1em;
+}
+
+h1, h2, h3 {
+  color: var(--text-color);
+  margin-bottom: 0.5em;
+}
+
+/* === BOTONES === */
+button {
+  background-color: var(--button-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: 0.5em 1em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 1em;
+}
+button:hover {
+  background-color: var(--button-hover-bg);
+}
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+/* === INPUTS, TEXTAREAS, SELECTS === */
+input,
+textarea,
+select {
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  padding: 0.5em;
+  font-size: 1em;
+  transition: border-color 0.2s ease;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+/* Enlaces */
+a {
+  color: var(--accent-color);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* === CONTENEDORES Y PANELES === */
+.container {
+  padding: 1em;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin: 1em 0;
+}
+
+/* === VENTANA PRINCIPAL (TIMELINE) === */
+#container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--background-color);
+}
+#topPanelSingleRow {
+  display: flex;
+  align-items: center;
+  padding: 0.8em;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--panel-bg);
+}
+#topPanelSingleRow button {
+  margin-right: 0.5em;
+}
+#bottomPanel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--background-color);
+}
+#timeScale {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--panel-bg);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+#tracksContainer {
+  flex: 1 1 auto;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background-color: var(--background-color);
+  padding: 1em;
+}
+
+/* Cada fila de pista */
+.trackRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.trackLabel {
+  width: 30px;
+  background-color: var(--control-bg);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  user-select: none;
+  border-radius: 4px;
+}
+.track {
+  flex: 1;
+  border: 1px dashed var(--border-color);
+  height: 60px;
+  background-color: var(--panel-bg);
+  margin-left: 0.5em;
+  position: relative;
+  border-radius: 4px;
+}
+
+/* Cursor de tiempo */
+.time-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--accent-color);
+  pointer-events: none;
+  z-index: 999;
+}
+.ghost-cursor {
+  background-color: rgba(144,164,174,0.5);
+}
+
+/* Clips (video, imagen y audio) */
+.clip {
+  position: absolute;
+  height: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  transition: box-shadow 0.2s ease;
+}
+.clip:hover {
+  box-shadow: 0 0 5px 2px var(--accent-color);
+}
+.clip-selected {
+  outline: 3px solid var(--accent-color);
+}
+
+/* Estilo específico para clips de audio */
+.audio-clip {
+  background: linear-gradient(45deg, #5a6d78, #708090);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+}
+
+/* Etiqueta de clip */
+.clip-label {
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Canvas de waveform en clips de audio */
+.waveform {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 1;
+}
+
+/* Handles para redimensionar clips */
+.handle {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  background-color: var(--border-color);
+  opacity: 0.8;
+  z-index: 3;
+}
+.handle.left { left: 0; }
+.handle.right { right: 0; }
+
+/* === VENTANA DE MONITOR === */
+#previewCanvas {
+  border: 1px solid var(--border-color);
+  display: block;
+  margin-bottom: 1em;
+}
+#playbackControls {
+  margin-top: 1em;
+  text-align: center;
+}
+#playbackControls button {
+  margin: 0 0.25em;
+}
+#renderModal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  align-items: center;
+  justify-content: center;
+}
+#renderModalContent {
+  background-color: var(--panel-bg);
+  padding: 1.5em;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+progress {
+  width: 300px;
+  height: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+}
+
+/* === VENTANA DE PARÁMETROS === */
+#paramFields {
+  margin-top: 1em;
+  padding: 1em;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+.fieldGroup {
+  margin-bottom: 1em;
+}
+label {
+  display: block;
+  margin-bottom: 0.5em;
+  font-size: 0.9em;
+}
+
+/* === PANEL DE TRANSICIONES Y EFECTOS === */
+#transitionsPanel {
+  position: fixed;
+  right: 10px;
+  top: 150px;
+  width: 250px;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1em;
+  z-index: 2000;
+}
+#transitionsPanel h2 {
+  font-size: 1.2em;
+  margin-bottom: 0.5em;
+  text-align: center;
+}
+#transitionItem {
+  background-color: var(--button-bg);
+  color: var(--text-color);
+  padding: 0.5em;
+  text-align: center;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+#transitionItem:hover {
+  background-color: var(--button-hover-bg);
+}
+
+/* Elementos de transición en el timeline */
+.transition {
+  pointer-events: none;
+  z-index: 1000;
+}
+h1 img{
+width:50px;
+}
+
