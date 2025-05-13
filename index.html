@@ -3,38 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor Multimedia Profesional</title>
-  <!-- Enlace a la hoja de estilos -->
+  <!-- Enlace a la hoja de estilos ubicada en css/estilo.css -->
   <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
   <h1>Editor Multimedia</h1>
   
-  <!-- Contenedor principal con dos columnas: panel lateral y área principal -->
+  <!-- Contenedor principal con dos columnas: panel lateral y área de workspace -->
   <div id="main-container">
     
-    <!-- Panel lateral (Media Panel) para insertar archivos -->
+    <!-- Panel lateral (Media Panel) -->
     <aside id="media-panel">
       <h2>Media Panel</h2>
       <!-- Zona para arrastrar y soltar archivos -->
       <div id="clip-drop-area" ondragover="event.preventDefault()" ondrop="handleClipDrop(event)">
         Arrastra y suelta archivos aquí
       </div>
-      <!-- Aquí se podrían listar los archivos ya insertados, pero en este ejemplo se agregan a la timeline -->
     </aside>
     
     <!-- Área principal (Workspace) -->
     <section id="workspace">
       <!-- Vista Previa (Preview) -->
       <div id="preview-container">
-        <!-- Elemento de previsualización para video -->
+        <!-- Elemento para video -->
         <video id="preview-video" width="640" height="360" controls style="display: none;"></video>
-        <!-- Elemento de previsualización para imagen -->
+        <!-- Elemento para imagen -->
         <img id="preview-image" alt="Preview de imagen" style="display: none;">
         <!-- Elemento canvas para audio (opcional) -->
         <canvas id="preview-canvas" width="640" height="360" style="display: none;"></canvas>
       </div>
       
-      <!-- Display de tiempo (Duración / Tiempo actual) -->
+      <!-- Display del tiempo (duración/tiempo actual) -->
       <div id="time-display">Tiempo actual: 00:00</div>
       
       <!-- Controles de reproducción -->
@@ -47,9 +46,9 @@
         <button onclick="togglePopOutPreview()">Pop-out Preview</button>
       </div>
       
-      <!-- Línea de tiempo (Timeline) -->
+      <!-- Timeline: aquí se agregarán los clips -->
       <div id="timeline-container" data-pixels-per-second="10">
-        <!-- Los clips se agregarán dinámicamente aquí -->
+        <!-- La línea base de la timeline -->
       </div>
     </section>
     
@@ -80,20 +79,24 @@
   <script src="js/funciones/updatePreviewAtTime.js"></script>
   <script src="js/funciones/updatePreviewUI.js"></script>
   
-  <!-- Script inline para el manejo del drop de clips y carga en la timeline -->
+  <!-- Script inline: funciones de manejo de clips en la timeline -->
   <script>
     "use strict";
     
-    // Función para formatear tiempo a "mm:ss"
+    // Función para formatear segundos a "mm:ss"
     function formatTime(seconds) {
       var min = Math.floor(seconds / 60);
       var sec = Math.floor(seconds % 60);
       return ("0" + min).slice(-2) + ":" + ("0" + sec).slice(-2);
     }
     
+    /**********************
+     * Manejo de clips en la timeline
+     **********************/
+    
     /**
-     * Maneja el drop de archivos en la zona de clips.
-     * Permite insertar múltiples archivos (video, imagen o audio) que se agregan a la timeline.
+     * Maneja el drop de archivos en la zona del Media Panel.
+     * Se agregan como clips a la timeline.
      */
     function handleClipDrop(event) {
       event.preventDefault();
@@ -103,7 +106,7 @@
       
       for (var i = 0; i < files.length; i++) {
         var file = files[i];
-        // Procesar solo archivos soportados
+        // Procesa solo archivos soportados (video, imagen, audio)
         if (file.type.startsWith("video/") ||
             file.type.startsWith("image/") ||
             file.type.startsWith("audio/")) {
@@ -115,12 +118,18 @@
     }
     
     /**
-     * Agrega un clip a la timeline a partir de un archivo.
+     * Agrega un nuevo clip a la timeline a partir de un archivo.
+     * Se crea un elemento .track-clip con un handle de redimensión.
      */
     function addClipToTimeline(file) {
       var timeline = document.getElementById("timeline-container");
       var clipElem = document.createElement("div");
       clipElem.className = "track-clip";
+      clipElem.style.width = "120px"; // ancho predeterminado
+      // Almacenamos la duración inicial según la anchura (a definir con pps)
+      var timelineContainer = document.getElementById("timeline-container");
+      var pps = parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
+      clipElem.dataset.duration = (120 / pps);
       
       // Crear URL con URL.createObjectURL y almacenar datos en dataset
       var fileURL = URL.createObjectURL(file);
@@ -137,9 +146,17 @@
         clipElem.textContent = "Audio: " + file.name;
       }
       
-      // Al hacer clic, cargar el clip en la vista previa
+      // Agregar el "handle" de redimensión al clip
+      var resizeHandle = document.createElement("div");
+      resizeHandle.className = "handle-resize";
+      resizeHandle.addEventListener("mousedown", function(event) {
+        startClipResize(event, clipElem);
+      });
+      clipElem.appendChild(resizeHandle);
+      
+      // Al hacer clic en el clip, se carga en la vista previa
       clipElem.addEventListener("click", function() {
-        // Quitar la clase "selected" de los demás clips
+        // Quitar la clase "selected" de otros clips
         var clips = document.querySelectorAll(".track-clip");
         clips.forEach(function(c) { c.classList.remove("selected"); });
         clipElem.classList.add("selected");
@@ -150,7 +167,7 @@
     }
     
     /**
-     * Carga el clip seleccionado en el área de vista previa, según su tipo.
+     * Carga el clip seleccionado en el área de vista previa según su tipo.
      */
     function loadClipIntoPreview(clipElem) {
       var type = clipElem.dataset.fileType;
@@ -179,18 +196,16 @@
         document.getElementById("time-display").textContent =
           "Imagen: " + clipElem.dataset.fileName;
       } else if (type.startsWith("audio/")) {
-        // Para audio, mostrar el canvas (aquí se podría dibujar la forma de onda)
         previewCanvas.style.display = "block";
         document.getElementById("time-display").textContent =
           "Audio: " + clipElem.dataset.fileName;
       }
     }
     
-    // Asignar el handler para la zona de drop de clips
     window.handleClipDrop = handleClipDrop;
   </script>
   
-  <!-- Script inline para controles de reproducción adaptados a la preview -->
+  <!-- Script inline: funciones de reproducción adaptadas a la preview -->
   <script>
     "use strict";
     
@@ -200,12 +215,14 @@
         previewVideo.play();
       }
     }
+    
     function stopPlayback() {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
         previewVideo.pause();
       }
     }
+    
     function resetPlayback() {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
@@ -214,6 +231,7 @@
         document.getElementById("time-display").textContent = "Tiempo actual: 00:00";
       }
     }
+    
     function stepFrames(direction) {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
@@ -255,6 +273,55 @@
     window.resetPlayback = resetPlayback;
     window.stepFrames = stepFrames;
     window.togglePopOutPreview = togglePopOutPreview;
+  </script>
+  
+  <!-- Script inline: Funciones de redimensión de clips en la timeline -->
+  <script>
+    "use strict";
+    
+    (function(){
+      var currentClipResize = null;
+      
+      function startClipResize(event, clipElem) {
+        event.preventDefault();
+        event.stopPropagation();
+        currentClipResize = {
+          clipElement: clipElem,
+          startMouseX: event.clientX,
+          initialWidth: clipElem.offsetWidth
+        };
+        document.addEventListener("mousemove", onClipResizeMove);
+        document.addEventListener("mouseup", onClipResizeUp);
+      }
+      
+      function onClipResizeMove(event) {
+        if (!currentClipResize) return;
+        var deltaX = event.clientX - currentClipResize.startMouseX;
+        var newWidth = currentClipResize.initialWidth + deltaX;
+        if(newWidth < 30) newWidth = 30;
+        currentClipResize.clipElement.style.width = newWidth + "px";
+        // Actualiza la duración del clip según la relación pixels/segundo
+        var timelineContainer = document.getElementById("timeline-container");
+        var pps = parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
+        var newDuration = newWidth / pps;
+        currentClipResize.clipElement.dataset.duration = newDuration;
+        // Si el clip está seleccionado, actualiza el display con la nueva duración
+        if (currentClipResize.clipElement.classList.contains("selected")) {
+          var timeDisplay = document.getElementById("time-display");
+          if (timeDisplay) {
+            timeDisplay.textContent = "Duración: " + formatTime(newDuration);
+          }
+        }
+      }
+      
+      function onClipResizeUp(event) {
+        document.removeEventListener("mousemove", onClipResizeMove);
+        document.removeEventListener("mouseup", onClipResizeUp);
+        currentClipResize = null;
+      }
+      
+      window.startClipResize = startClipResize;
+    })();
   </script>
   
 </body>

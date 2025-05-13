@@ -28,7 +28,7 @@ h1 {
 }
 
 /* ================================================
-   Layout Principal: dos columnas
+   Layout Principal: Panel lateral y Área de Workspace
    ================================================ */
 #main-container {
   display: flex;
@@ -92,10 +92,10 @@ h1 {
   max-width: 100%;
   border: 1px solid #3a3a3a;
   border-radius: 3px;
-  display: none; /* Se mostrarán segun el clip seleccionado */
+  display: none; /* Se mostrarán según el clip seleccionado */
 }
 
-/* Display del tiempo */
+/* Display de tiempo */
 #time-display {
   text-align: center;
   font-size: 1.2rem;
@@ -129,7 +129,9 @@ h1 {
   filter: brightness(1.1);
 }
 
-/* Timeline de clips */
+/* ================================================
+   Timeline de clips
+   ================================================ */
 #timeline-container {
   background-color: #2d2d2d;
   display: flex;
@@ -137,9 +139,23 @@ h1 {
   padding: 10px;
   border: 1px solid #3a3a3a;
   border-radius: 4px;
+  position: relative;
 }
 
+/* Línea base de la timeline */
+#timeline-container::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #007acc;
+}
+
+/* Cada clip en la timeline */
 .track-clip {
+  position: relative;
   border: 1px solid #555;
   margin-right: 10px;
   padding: 8px 10px;
@@ -158,4 +174,18 @@ h1 {
 .track-clip.selected {
   border-color: #007acc;
   background-color: #1e1e1e;
+}
+
+/* Handle para cambiar la longitud del clip */
+.handle-resize {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  background-color: #007acc;
+  opacity: 0.7;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
 }
