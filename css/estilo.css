@@ -1,8 +1,8 @@
 /* css/estilo.css */
 
-/* ================================
-   Global Reset y Configuración Básica
-   ================================ */
+/* ================================================
+   Reset Global y Configuración Básica
+   ================================================ */
 * {
   margin: 0;
   padding: 0;
@@ -10,138 +10,152 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background-color: #fafafa;
-  color: #333;
+  background-color: #121212; /* Fondo oscuro */
+  color: #e0e0e0; /* Texto claro */
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.5;
   padding: 20px;
 }
 
-/* ================================
+/* ================================================
    Encabezado
-   ================================ */
+   ================================================ */
 h1 {
   text-align: center;
   margin-bottom: 20px;
+  font-size: 2rem;
+  color: #f0f0f0;
 }
 
-/* ================================
-   Zona para Arrastrar y Soltar Clips
-   ================================ */
+/* ================================================
+   Zona para Arrastrar y Soltar Clips (Media Library)
+   ================================================ */
 #clip-drop-area {
-  border: 2px dashed #aaa;
+  border: 2px dashed #3a3a3a;
   width: 80%;
   margin: 20px auto;
   padding: 20px;
   text-align: center;
-  color: #777;
-  background-color: #fff;
-  border-radius: 5px;
+  color: #b0b0b0;
+  background-color: #1e1e1e;
+  border-radius: 4px;
   transition: background-color 0.3s;
 }
 
 #clip-drop-area:hover {
-  background-color: #f0f0f0;
+  background-color: #272727;
 }
 
-/* ================================
+/* ================================================
    Timeline (Contenedor de Clips)
-   ================================ */
+   ================================================ */
 #timeline-container {
   display: flex;
   overflow-x: auto;
   padding: 10px;
-  background: #eee;
+  background: #2d2d2d;
   margin: 10px auto;
-  border: 1px solid #ccc;
-  border-radius: 3px;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
 }
 
-/* Cada clip en la timeline */
 .track-clip {
-  border: 1px solid #333;
+  border: 1px solid #555;
   margin-right: 10px;
-  padding: 5px;
+  padding: 8px 10px;
   cursor: pointer;
-  min-width: 100px;
-  background: #fff;
+  min-width: 120px;
+  background: #1f1f1f;
   border-radius: 3px;
   transition: background-color 0.3s, border-color 0.3s;
+  font-size: 0.9rem;
 }
 
 .track-clip:hover {
-  background-color: #f5f5f5;
+  background-color: #262626;
 }
 
 .track-clip.selected {
-  border-color: #4a90e2;
+  border-color: #007acc;
+  background-color: #1e1e1e;
 }
 
-/* ================================
+/* ================================================
    Contenedor de Vista Previa
-   ================================ */
+   ================================================ */
 #preview-container {
   text-align: center;
   margin: 20px auto;
+  background-color: #1e1e1e;
+  padding: 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
 }
 
 /* Elemento de video para la preview */
 #preview-video {
-  max-width: 640px;
-  width: 100%;
-  border: 1px solid #ccc;
+  max-width: 100%;
+  width: 640px;
+  border: 1px solid #3a3a3a;
   border-radius: 3px;
-  display: none; /* Se mostrará cuando se cargue un archivo de video */
+  display: none; /* Se muestra cuando se carga un video */
 }
 
 /* Elemento de imagen para la preview */
 #preview-image {
-  max-width: 640px;
-  width: 100%;
-  border: 1px solid #ccc;
+  max-width: 100%;
+  width: 640px;
+  border: 1px solid #3a3a3a;
   border-radius: 3px;
-  display: none; /* Se mostrará cuando se cargue un archivo de imagen */
+  display: none; /* Se muestra cuando se carga una imagen */
 }
 
-/* Elemento canvas para la preview de audio (por ejemplo, forma de onda) */
+/* Elemento canvas para la preview de audio (forma de onda, por ejemplo) */
 #preview-canvas {
-  max-width: 640px;
-  width: 100%;
-  border: 1px solid #ccc;
+  max-width: 100%;
+  width: 640px;
+  border: 1px solid #3a3a3a;
   border-radius: 3px;
-  display: none; /* Se mostrará cuando se cargue un archivo de audio */
+  display: none; /* Se muestra cuando se carga un audio */
 }
 
-/* ================================
-   Display de Tiempo
-   ================================ */
+/* ================================================
+   Display de Tiempo (Duración / Tiempo Actual)
+   ================================================ */
 #time-display {
   text-align: center;
-  font-size: 18px;
+  font-size: 1.2rem;
   margin: 10px auto;
   padding: 5px;
+  color: #f0f0f0;
 }
 
-/* ================================
+/* ================================================
    Controles de Reproducción
-   ================================ */
+   ================================================ */
 #controls {
   text-align: center;
   margin-bottom: 20px;
 }
 
 #controls button {
-  padding: 8px 12px;
+  padding: 10px 16px;
   margin: 5px;
-  font-size: 16px;
+  font-size: 1rem;
   cursor: pointer;
-  background-color: #4a90e2;
+  background-color: #007acc; /* Acento en azul similar a Premiere */
   color: #fff;
   border: none;
   border-radius: 3px;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s, filter 0.3s;
 }
 
 #controls button:hover {
-  background-color: #367dc1;
+  background-color: #005a9e;
+  filter: brightness(1.1);
 }
+
+/* ================================================
+   Pop-out Preview (Opcional, adicional)
+   ================================================ */
+/* No se requieren estilos adicionales para el pop-out, ya que se mueve el elemento DOM a otra ventana. */
