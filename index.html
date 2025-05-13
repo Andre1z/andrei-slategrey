@@ -9,10 +9,9 @@
 <body>
   <h1>Editor Multimedia</h1>
   
-  <!-- Contenedor principal con dos columnas: panel lateral y área de workspace -->
+  <!-- Contenedor principal con dos columnas: Panel lateral (Media Panel) y Área de Workspace -->
   <div id="main-container">
-    
-    <!-- Panel lateral (Media Panel) -->
+    <!-- Panel lateral -->
     <aside id="media-panel">
       <h2>Media Panel</h2>
       <!-- Zona para arrastrar y soltar archivos -->
@@ -21,19 +20,19 @@
       </div>
     </aside>
     
-    <!-- Área principal (Workspace) -->
+    <!-- Área de Workspace -->
     <section id="workspace">
-      <!-- Vista Previa (Preview) -->
+      <!-- Vista Previa -->
       <div id="preview-container">
-        <!-- Elemento para video -->
+        <!-- Elemento de video para preview -->
         <video id="preview-video" width="640" height="360" controls style="display: none;"></video>
-        <!-- Elemento para imagen -->
+        <!-- Elemento de imagen para preview -->
         <img id="preview-image" alt="Preview de imagen" style="display: none;">
         <!-- Elemento canvas para audio (opcional) -->
         <canvas id="preview-canvas" width="640" height="360" style="display: none;"></canvas>
       </div>
       
-      <!-- Display del tiempo (duración/tiempo actual) -->
+      <!-- Display de tiempo (duración/tiempo actual) -->
       <div id="time-display">Tiempo actual: 00:00</div>
       
       <!-- Controles de reproducción -->
@@ -46,12 +45,16 @@
         <button onclick="togglePopOutPreview()">Pop-out Preview</button>
       </div>
       
-      <!-- Timeline: aquí se agregarán los clips -->
-      <div id="timeline-container" data-pixels-per-second="10">
-        <!-- La línea base de la timeline -->
+      <!-- Timeline: al hacer clic se efectúa un “fit” de la secuencia -->
+      <div id="timeline-container" data-pixels-per-second="10" onclick="fitTimeline()">
+        <!-- Contenedor interno para los clips -->
+        <div id="timeline-content">
+          <!-- Aquí se agregarán los clips (cada uno con su handle de redimensión) -->
+        </div>
+        <!-- Zona donde se dibujan las marcas de tiempo (ticks y etiquetas) -->
+        <div id="time-markers"></div>
       </div>
     </section>
-    
   </div>
   
   <!-- Inclusión de módulos JavaScript (ruta: js/funciones/) -->
@@ -79,7 +82,7 @@
   <script src="js/funciones/updatePreviewAtTime.js"></script>
   <script src="js/funciones/updatePreviewUI.js"></script>
   
-  <!-- Script inline: funciones de manejo de clips en la timeline -->
+  <!-- Script inline: manejo de clips en la timeline -->
   <script>
     "use strict";
     
@@ -91,13 +94,10 @@
     }
     
     /**********************
-     * Manejo de clips en la timeline
+     * Manejo de clips y timeline
      **********************/
     
-    /**
-     * Maneja el drop de archivos en la zona del Media Panel.
-     * Se agregan como clips a la timeline.
-     */
+    // Maneja el drop de archivos en la zona del Media Panel
     function handleClipDrop(event) {
       event.preventDefault();
       event.stopPropagation();
@@ -106,7 +106,7 @@
       
       for (var i = 0; i < files.length; i++) {
         var file = files[i];
-        // Procesa solo archivos soportados (video, imagen, audio)
+        // Procesa solo video, imagen o audio
         if (file.type.startsWith("video/") ||
             file.type.startsWith("image/") ||
             file.type.startsWith("audio/")) {
@@ -115,29 +115,28 @@
           console.warn("Tipo de archivo no soportado: " + file.type);
         }
       }
+      // Tras agregar clips, redibuja la línea de tiempo
+      drawTimeMarkers();
     }
     
-    /**
-     * Agrega un nuevo clip a la timeline a partir de un archivo.
-     * Se crea un elemento .track-clip con un handle de redimensión.
-     */
+    // Agrega un nuevo clip a la timeline a partir de un archivo
     function addClipToTimeline(file) {
-      var timeline = document.getElementById("timeline-container");
+      var timelineContent = document.getElementById("timeline-content");
       var clipElem = document.createElement("div");
       clipElem.className = "track-clip";
-      clipElem.style.width = "120px"; // ancho predeterminado
-      // Almacenamos la duración inicial según la anchura (a definir con pps)
+      clipElem.style.width = "120px"; // Ancho predeterminado
+      // Usa el atributo data-pixels-per-second de la timeline para calcular duración
       var timelineContainer = document.getElementById("timeline-container");
       var pps = parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
       clipElem.dataset.duration = (120 / pps);
       
-      // Crear URL con URL.createObjectURL y almacenar datos en dataset
+      // Crear URL del archivo y guardar datos en dataset
       var fileURL = URL.createObjectURL(file);
       clipElem.dataset.fileType = file.type;
       clipElem.dataset.fileURL = fileURL;
       clipElem.dataset.fileName = file.name;
       
-      // Mostrar un nombre descriptivo en el clip
+      // Texto descriptivo en el clip
       if (file.type.startsWith("video/")) {
         clipElem.textContent = "Video: " + file.name;
       } else if (file.type.startsWith("image/")) {
@@ -146,7 +145,7 @@
         clipElem.textContent = "Audio: " + file.name;
       }
       
-      // Agregar el "handle" de redimensión al clip
+      // Agrega un handle de redimensión en la parte derecha
       var resizeHandle = document.createElement("div");
       resizeHandle.className = "handle-resize";
       resizeHandle.addEventListener("mousedown", function(event) {
@@ -154,30 +153,26 @@
       });
       clipElem.appendChild(resizeHandle);
       
-      // Al hacer clic en el clip, se carga en la vista previa
+      // Al hacer clic, carga el clip en el preview
       clipElem.addEventListener("click", function() {
-        // Quitar la clase "selected" de otros clips
         var clips = document.querySelectorAll(".track-clip");
         clips.forEach(function(c) { c.classList.remove("selected"); });
         clipElem.classList.add("selected");
         loadClipIntoPreview(clipElem);
       });
       
-      timeline.appendChild(clipElem);
+      timelineContent.appendChild(clipElem);
     }
     
-    /**
-     * Carga el clip seleccionado en el área de vista previa según su tipo.
-     */
+    // Carga el clip seleccionado en el área de preview
     function loadClipIntoPreview(clipElem) {
       var type = clipElem.dataset.fileType;
       var url = clipElem.dataset.fileURL;
-      
       var previewVideo = document.getElementById("preview-video");
       var previewImage = document.getElementById("preview-image");
       var previewCanvas = document.getElementById("preview-canvas");
       
-      // Ocultar todos los elementos de preview
+      // Oculta todos los elementos de preview
       previewVideo.style.display = "none";
       previewImage.style.display = "none";
       previewCanvas.style.display = "none";
@@ -202,10 +197,74 @@
       }
     }
     
+    // Función para "fit" la timeline: ajusta el zoom para que la secuencia completa se vea
+    function fitTimeline() {
+      var timelineContainer = document.getElementById("timeline-container");
+      var timelineContent = document.getElementById("timeline-content");
+      var currentPps = parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
+      
+      // Calcula el ancho total actual (en px) y la duración total en segundos
+      var totalWidth = timelineContent.scrollWidth;
+      var totalDuration = totalWidth / currentPps;
+      var containerWidth = timelineContainer.clientWidth;
+      
+      // Nuevo valor de pps para que la secuencia completa se ajuste al ancho del contenedor
+      var newPps = containerWidth / totalDuration;
+      timelineContainer.setAttribute("data-pixels-per-second", newPps);
+      
+      // Actualiza el ancho de cada clip en función de su duración
+      var clips = timelineContent.querySelectorAll(".track-clip");
+      clips.forEach(function(clip) {
+        var duration = parseFloat(clip.dataset.duration);
+        clip.style.width = (duration * newPps) + "px";
+      });
+      
+      // Redibuja las marcas de tiempo
+      drawTimeMarkers();
+    }
+    
+    // Dibuja en la timeline los ticks y etiquetas de segundos
+    function drawTimeMarkers() {
+      var timelineContainer = document.getElementById("timeline-container");
+      var timelineContent = document.getElementById("timeline-content");
+      var timeMarkers = document.getElementById("time-markers");
+      var pps = parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
+      
+      // Calcula la duración total según el ancho de timelineContent
+      var totalWidth = timelineContent.scrollWidth;
+      var totalDuration = totalWidth / pps;
+      
+      // Limpia marcas previas
+      timeMarkers.innerHTML = "";
+      
+      // Dibuja una marca por segundo
+      for (var sec = 0; sec <= Math.floor(totalDuration); sec++) {
+        var marker = document.createElement("div");
+        marker.className = "time-marker";
+        marker.style.position = "absolute";
+        marker.style.bottom = "0";
+        marker.style.left = (sec * pps) + "px";
+        marker.style.width = "1px";
+        marker.style.height = "10px";
+        marker.style.backgroundColor = "#007acc";
+        
+        var label = document.createElement("span");
+        label.textContent = formatTime(sec);
+        label.style.position = "absolute";
+        label.style.bottom = "10px";
+        label.style.left = (sec * pps + 2) + "px";
+        label.style.fontSize = "0.8rem";
+        label.style.color = "#f0f0f0";
+        
+        timeMarkers.appendChild(marker);
+        timeMarkers.appendChild(label);
+      }
+    }
+    
     window.handleClipDrop = handleClipDrop;
   </script>
   
-  <!-- Script inline: funciones de reproducción adaptadas a la preview -->
+  <!-- Script inline: Controles de reproducción para la vista preview -->
   <script>
     "use strict";
     
@@ -300,17 +359,14 @@
         var newWidth = currentClipResize.initialWidth + deltaX;
         if(newWidth < 30) newWidth = 30;
         currentClipResize.clipElement.style.width = newWidth + "px";
-        // Actualiza la duración del clip según la relación pixels/segundo
+        // Actualiza la duración basándose en el nuevo ancho y en pps
         var timelineContainer = document.getElementById("timeline-container");
         var pps = parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
         var newDuration = newWidth / pps;
         currentClipResize.clipElement.dataset.duration = newDuration;
-        // Si el clip está seleccionado, actualiza el display con la nueva duración
+        // Si el clip está seleccionado, actualiza el display
         if (currentClipResize.clipElement.classList.contains("selected")) {
-          var timeDisplay = document.getElementById("time-display");
-          if (timeDisplay) {
-            timeDisplay.textContent = "Duración: " + formatTime(newDuration);
-          }
+          document.getElementById("time-display").textContent = "Duración: " + formatTime(newDuration);
         }
       }
       
@@ -318,6 +374,8 @@
         document.removeEventListener("mousemove", onClipResizeMove);
         document.removeEventListener("mouseup", onClipResizeUp);
         currentClipResize = null;
+        // Actualiza los marcadores de la timeline (opcional)
+        drawTimeMarkers();
       }
       
       window.startClipResize = startClipResize;

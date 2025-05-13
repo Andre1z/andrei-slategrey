@@ -11,7 +11,7 @@
 
 body {
   background-color: #121212; /* Fondo oscuro */
-  color: #e0e0e0; /* Texto claro */
+  color: #e0e0e0;            /* Texto claro */
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.5;
   padding: 20px;
@@ -51,7 +51,7 @@ h1 {
   font-size: 1.5rem;
 }
 
-/* Zona para arrastrar y soltar archivos */
+/* Zona para arrastrar y soltar archivos (Media Panel) */
 #clip-drop-area {
   border: 2px dashed #3a3a3a;
   padding: 20px;
@@ -134,30 +134,33 @@ h1 {
    ================================================ */
 #timeline-container {
   background-color: #2d2d2d;
-  display: flex;
+  position: relative;
   overflow-x: auto;
   padding: 10px;
   border: 1px solid #3a3a3a;
   border-radius: 4px;
-  position: relative;
 }
 
-/* Línea base de la timeline */
-#timeline-container::before {
-  content: "";
+/* Contenedor interno para clips */
+#timeline-content {
+  display: flex;
+  gap: 10px;
+}
+
+/* Zona para marcas de tiempo */
+#time-markers {
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 2px;
-  background: #007acc;
+  height: 30px;
+  pointer-events: none;
 }
 
 /* Cada clip en la timeline */
 .track-clip {
   position: relative;
   border: 1px solid #555;
-  margin-right: 10px;
   padding: 8px 10px;
   cursor: pointer;
   min-width: 120px;
@@ -176,7 +179,7 @@ h1 {
   background-color: #1e1e1e;
 }
 
-/* Handle para cambiar la longitud del clip */
+/* Handle para redimensionar (ajustar longitud) del clip */
 .handle-resize {
   position: absolute;
   right: 0;
