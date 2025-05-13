@@ -51,7 +51,7 @@ h1 {
   font-size: 1.5rem;
 }
 
-/* Zona para arrastrar y soltar archivos (Media Panel) */
+/* Zona para arrastrar y soltar archivos */
 #clip-drop-area {
   border: 2px dashed #3a3a3a;
   padding: 20px;
@@ -92,7 +92,7 @@ h1 {
   max-width: 100%;
   border: 1px solid #3a3a3a;
   border-radius: 3px;
-  display: none; /* Se muestran según el clip seleccionado */
+  display: none;
 }
 
 /* Time Display (Scrubber) */
@@ -107,13 +107,12 @@ h1 {
   text-align: center;
 }
 
-/* Estilo para el valor de tiempo */
 #time-value {
-  padding-left: 10px; /* Separación para que se lea mejor */
+  padding-left: 10px;
   font-size: 1.2rem;
 }
 
-/* Aguja roja */
+/* Aguja Roja */
 #time-needle {
   position: absolute;
   top: 0;
@@ -124,7 +123,7 @@ h1 {
   cursor: ew-resize;
 }
 
-/* Controles de reproducción */
+/* Controles de Reproducción */
 #controls {
   text-align: center;
   margin-bottom: 10px;
@@ -195,7 +194,7 @@ h1 {
   background-color: #1e1e1e;
 }
 
-/* Handle para redimensionar (ajustar longitud) del clip */
+/* Handle para redimensionar */
 .handle-resize {
   position: absolute;
   right: 0;
