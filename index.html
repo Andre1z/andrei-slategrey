@@ -2,44 +2,57 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Editor Multimedia – Timeline y Preview</title>
-  <!-- Enlace a la hoja de estilos ubicada en css/estilo.css -->
+  <title>Editor Multimedia Profesional</title>
+  <!-- Enlace a la hoja de estilos -->
   <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
   <h1>Editor Multimedia</h1>
   
-  <!-- Zona para arrastrar y soltar archivos (para agregar clips a la timeline) -->
-  <div id="clip-drop-area" ondragover="event.preventDefault()" ondrop="handleClipDrop(event)">
-    Arrastra y suelta archivos en la zona de clips
-  </div>
-  
-  <!-- Timeline: aquí se agregarán dinámicamente los clips -->
-  <div id="timeline-container" data-pixels-per-second="10">
-    <!-- Los elementos con clase "track-clip" se agregarán aquí -->
-  </div>
-  
-  <!-- Vista Previa: se carga el clip seleccionado -->
-  <div id="preview-container">
-    <!-- Elemento para video -->
-    <video id="preview-video" width="640" height="360" controls style="display: none;"></video>
-    <!-- Elemento para imagen -->
-    <img id="preview-image" alt="Preview de imagen" style="display: none;">
-    <!-- Elemento canvas para audio (opcional) -->
-    <canvas id="preview-canvas" width="640" height="360" style="display: none;"></canvas>
-  </div>
-  
-  <!-- Display para mostrar la duración o tiempo actual -->
-  <div id="time-display">Tiempo actual: 00:00</div>
-  
-  <!-- Controles de reproducción -->
-  <div id="controls">
-    <button onclick="playbackLoop()">Play</button>
-    <button onclick="stopPlayback()">Pause</button>
-    <button onclick="resetPlayback()">Reset</button>
-    <button onclick="stepFrames(-1)">Step Back</button>
-    <button onclick="stepFrames(1)">Step Forward</button>
-    <button onclick="togglePopOutPreview()">Pop-out Preview</button>
+  <!-- Contenedor principal con dos columnas: panel lateral y área principal -->
+  <div id="main-container">
+    
+    <!-- Panel lateral (Media Panel) para insertar archivos -->
+    <aside id="media-panel">
+      <h2>Media Panel</h2>
+      <!-- Zona para arrastrar y soltar archivos -->
+      <div id="clip-drop-area" ondragover="event.preventDefault()" ondrop="handleClipDrop(event)">
+        Arrastra y suelta archivos aquí
+      </div>
+      <!-- Aquí se podrían listar los archivos ya insertados, pero en este ejemplo se agregan a la timeline -->
+    </aside>
+    
+    <!-- Área principal (Workspace) -->
+    <section id="workspace">
+      <!-- Vista Previa (Preview) -->
+      <div id="preview-container">
+        <!-- Elemento de previsualización para video -->
+        <video id="preview-video" width="640" height="360" controls style="display: none;"></video>
+        <!-- Elemento de previsualización para imagen -->
+        <img id="preview-image" alt="Preview de imagen" style="display: none;">
+        <!-- Elemento canvas para audio (opcional) -->
+        <canvas id="preview-canvas" width="640" height="360" style="display: none;"></canvas>
+      </div>
+      
+      <!-- Display de tiempo (Duración / Tiempo actual) -->
+      <div id="time-display">Tiempo actual: 00:00</div>
+      
+      <!-- Controles de reproducción -->
+      <div id="controls">
+        <button onclick="playbackLoop()">Play</button>
+        <button onclick="stopPlayback()">Pause</button>
+        <button onclick="resetPlayback()">Reset</button>
+        <button onclick="stepFrames(-1)">Step Back</button>
+        <button onclick="stepFrames(1)">Step Forward</button>
+        <button onclick="togglePopOutPreview()">Pop-out Preview</button>
+      </div>
+      
+      <!-- Línea de tiempo (Timeline) -->
+      <div id="timeline-container" data-pixels-per-second="10">
+        <!-- Los clips se agregarán dinámicamente aquí -->
+      </div>
+    </section>
+    
   </div>
   
   <!-- Inclusión de módulos JavaScript (ruta: js/funciones/) -->
@@ -67,7 +80,7 @@
   <script src="js/funciones/updatePreviewAtTime.js"></script>
   <script src="js/funciones/updatePreviewUI.js"></script>
   
-  <!-- Script inline para manejar la carga de múltiples archivos en la timeline -->
+  <!-- Script inline para el manejo del drop de clips y carga en la timeline -->
   <script>
     "use strict";
     
@@ -79,21 +92,18 @@
     }
     
     /**
-     * Maneja el evento "drop" únicamente para la zona de clips (en la timeline).
-     * Permite agregar múltiples archivos (video, imagen o audio) a la timeline.
+     * Maneja el drop de archivos en la zona de clips.
+     * Permite insertar múltiples archivos (video, imagen o audio) que se agregan a la timeline.
      */
     function handleClipDrop(event) {
       event.preventDefault();
       event.stopPropagation();
       var files = event.dataTransfer.files;
-      if (!files || files.length === 0) {
-        console.warn("No se han arrastrado archivos.");
-        return;
-      }
-      // Procesa cada archivo
+      if (!files || files.length === 0) return;
+      
       for (var i = 0; i < files.length; i++) {
         var file = files[i];
-        // Procesa solo videos, imágenes o audio
+        // Procesar solo archivos soportados
         if (file.type.startsWith("video/") ||
             file.type.startsWith("image/") ||
             file.type.startsWith("audio/")) {
@@ -105,39 +115,33 @@
     }
     
     /**
-     * Agrega un nuevo clip a la timeline a partir de un archivo.
-     * Se crea un elemento con clase "track-clip" que se muestra en la timeline.
+     * Agrega un clip a la timeline a partir de un archivo.
      */
     function addClipToTimeline(file) {
       var timeline = document.getElementById("timeline-container");
       var clipElem = document.createElement("div");
       clipElem.className = "track-clip";
       
-      // Crear URL para el archivo usando URL.createObjectURL
+      // Crear URL con URL.createObjectURL y almacenar datos en dataset
       var fileURL = URL.createObjectURL(file);
-      // Almacenar datos en dataset para usarlos luego
       clipElem.dataset.fileType = file.type;
       clipElem.dataset.fileURL = fileURL;
       clipElem.dataset.fileName = file.name;
       
-      // Para la vista en la timeline simplemente se muestra un texto
+      // Mostrar un nombre descriptivo en el clip
       if (file.type.startsWith("video/")) {
         clipElem.textContent = "Video: " + file.name;
       } else if (file.type.startsWith("image/")) {
         clipElem.textContent = "Imagen: " + file.name;
       } else if (file.type.startsWith("audio/")) {
         clipElem.textContent = "Audio: " + file.name;
-      } else {
-        clipElem.textContent = file.name;
       }
       
-      // Al hacer clic en el clip, se carga en la vista previa
+      // Al hacer clic, cargar el clip en la vista previa
       clipElem.addEventListener("click", function() {
-        // Quitar la clase "selected" de otros clips
+        // Quitar la clase "selected" de los demás clips
         var clips = document.querySelectorAll(".track-clip");
-        for (var j = 0; j < clips.length; j++) {
-          clips[j].classList.remove("selected");
-        }
+        clips.forEach(function(c) { c.classList.remove("selected"); });
         clipElem.classList.add("selected");
         loadClipIntoPreview(clipElem);
       });
@@ -146,12 +150,12 @@
     }
     
     /**
-     * Carga el clip seleccionado en el contenedor de vista previa.
-     * Dependiendo del tipo (video, imagen, audio) se muestra el elemento correspondiente.
+     * Carga el clip seleccionado en el área de vista previa, según su tipo.
      */
     function loadClipIntoPreview(clipElem) {
       var type = clipElem.dataset.fileType;
       var url = clipElem.dataset.fileURL;
+      
       var previewVideo = document.getElementById("preview-video");
       var previewImage = document.getElementById("preview-image");
       var previewCanvas = document.getElementById("preview-canvas");
@@ -165,28 +169,31 @@
         previewVideo.src = url;
         previewVideo.style.display = "block";
         previewVideo.load();
-        // Al cargar los metadatos, muestra la duración
         previewVideo.addEventListener("loadedmetadata", function() {
-          document.getElementById("time-display").textContent = "Duración del video: " + formatTime(previewVideo.duration);
+          document.getElementById("time-display").textContent =
+            "Duración del video: " + formatTime(previewVideo.duration);
         });
       } else if (type.startsWith("image/")) {
         previewImage.src = url;
         previewImage.style.display = "block";
-        document.getElementById("time-display").textContent = "Imagen: " + clipElem.dataset.fileName;
+        document.getElementById("time-display").textContent =
+          "Imagen: " + clipElem.dataset.fileName;
       } else if (type.startsWith("audio/")) {
-        document.getElementById("time-display").textContent = "Audio: " + clipElem.dataset.fileName;
+        // Para audio, mostrar el canvas (aquí se podría dibujar la forma de onda)
         previewCanvas.style.display = "block";
-        // Aquí podrías agregar la función para dibujar la forma de onda, si la implementas.
+        document.getElementById("time-display").textContent =
+          "Audio: " + clipElem.dataset.fileName;
       }
     }
     
-    // Asignar la función de drop para la zona de clips
+    // Asignar el handler para la zona de drop de clips
     window.handleClipDrop = handleClipDrop;
   </script>
   
-  <!-- Script inline para controles de reproducción adaptados al elemento de preview -->
+  <!-- Script inline para controles de reproducción adaptados a la preview -->
   <script>
     "use strict";
+    
     function playbackLoop() {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
@@ -210,15 +217,18 @@
     function stepFrames(direction) {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
-        var fps = 30; // valor por defecto
+        var fps = 30;
         var step = 1.0 / fps;
-        var newTime = previewVideo.currentTime + direction * step;
+        var newTime = previewVideo.currentTime + (direction * step);
         if (newTime < 0) newTime = 0;
-        if (previewVideo.duration && newTime > previewVideo.duration) newTime = previewVideo.duration;
+        if (previewVideo.duration && newTime > previewVideo.duration)
+          newTime = previewVideo.duration;
         previewVideo.currentTime = newTime;
-        document.getElementById("time-display").textContent = "Tiempo actual: " + formatTime(newTime);
+        document.getElementById("time-display").textContent =
+          "Tiempo actual: " + formatTime(newTime);
       }
     }
+    
     var popOutWindow = null;
     function togglePopOutPreview() {
       var previewContainer = document.getElementById("preview-container");
