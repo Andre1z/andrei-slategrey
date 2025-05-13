@@ -10,8 +10,8 @@
 }
 
 body {
-  background-color: #121212; /* Fondo oscuro */
-  color: #e0e0e0;            /* Texto claro */
+  background-color: #121212;
+  color: #e0e0e0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.5;
   padding: 20px;
@@ -92,10 +92,10 @@ h1 {
   max-width: 100%;
   border: 1px solid #3a3a3a;
   border-radius: 3px;
-  display: none; /* Se mostrarán según el clip seleccionado */
+  display: none;
 }
 
-/* Display de tiempo */
+/* Display de tiempo (también actúa como scrubber) */
 #time-display {
   text-align: center;
   font-size: 1.2rem;
@@ -104,6 +104,8 @@ h1 {
   background-color: #1e1e1e;
   border: 1px solid #333;
   border-radius: 4px;
+  user-select: none;
+  cursor: pointer;
 }
 
 /* Controles de reproducción */
@@ -141,13 +143,11 @@ h1 {
   border-radius: 4px;
 }
 
-/* Contenedor interno para clips */
 #timeline-content {
   display: flex;
   gap: 10px;
 }
 
-/* Zona para marcas de tiempo */
 #time-markers {
   position: absolute;
   bottom: 0;
