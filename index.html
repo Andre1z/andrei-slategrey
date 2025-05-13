@@ -2,100 +2,136 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editor Multimedia Timeline</title>
-  <link rel="stylesheet" type="text/css" href="css/estilo.css">
+  <title>Editor Multimedia</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #fafafa;
+    }
+    h1 {
+      text-align: center;
+      margin-top: 20px;
+    }
+    /* Contenedor de la línea de tiempo */
+    #timeline-container {
+      position: relative;
+      width: 800px;
+      height: 80px;
+      margin: 20px auto;
+      border: 1px solid #ccc;
+      background-color: #f4f4f4;
+    }
+    /* Cursor de la línea de tiempo */
+    #time-cursor {
+      position: absolute;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      background-color: red;
+      /* Posición inicial (en píxeles, que se convertirá a tiempo en segundos) */
+      left: 100px;
+    }
+    /* Display para mostrar el tiempo actual */
+    #time-display {
+      text-align: center;
+      font-size: 18px;
+      margin: 10px;
+    }
+    /* Controles de reproducción */
+    #controls {
+      text-align: center;
+      margin: 10px;
+    }
+    #controls button {
+      padding: 8px 12px;
+      margin: 0 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    /* Área de drag & drop */
+    #file-drop-area {
+      border: 2px dashed #aaa;
+      width: 400px;
+      margin: 20px auto;
+      padding: 20px;
+      text-align: center;
+      color: #777;
+      background-color: #fff;
+    }
+    /* Estilos para la previsualización */
+    #preview-canvas, #preview-video {
+      display: block;
+      margin: 20px auto;
+      border: 1px solid #ccc;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Editor Multimedia Timeline</h1>
-  </header>
+  <h1>Editor Multimedia</h1>
   
-  <main>
-    <!-- Contenedor principal de la timeline -->
-    <div id="timeline-container">
-      <!-- Área para renderizar la línea de tiempo (puede ser un canvas o divs dinámicos) -->
-      <canvas id="timeline-canvas" width="800" height="200"></canvas>
-    </div>
-    
-    <!-- Controles básicos de la aplicación -->
-    <section id="controls">
-      <button id="play-btn">Reproducir</button>
-      <button id="pause-btn">Pausar</button>
-      <button id="render-btn">Renderizar</button>
-    </section>
-    
-    <!-- Input para selección de archivos (oculto, se puede activar vía drag & drop o botones) -->
-    <input type="file" id="file-input" multiple style="display: none;">
-  </main>
+  <!-- Contenedor de la línea de tiempo con el atributo de conversión: píxeles/segundo -->
+  <div id="timeline-container" data-pixels-per-second="10">
+      <div id="time-cursor"></div>
+  </div>
   
-  <!-- Inclusión de scripts -->
-  <!-- Se incluye el archivo PHP que, asumiendo que se trata de código dinámico, retorna JavaScript -->
-  <script src="js/codigo.php"></script>
-  <!-- Inclusión de funciones para el manejo de la timeline -->
-  <script src="js/funciones/drawTimeScale.js"></script>
-  <script src="js/funciones/createTrackClip.js"></script>
-  <script src="js/funciones/decodeAudioFile.js"></script>
-  <script src="js/funciones/doRender.js"></script>
-  <script src="js/funciones/drawAudioWaveform.js"></script>
-  <script src="js/funciones/drawClipsAtTime.js"></script>
-  <script src="js/funciones/fileToArrayBuffer.js"></script>
-  <script src="js/funciones/getTimelineMaxTime.js"></script>
-  <script src="js/funciones/handleFileDrop.js"></script>
-  <script src="js/funciones/moveTimeCursorTo.js"></script>
-  <script src="js/funciones/onClipMoveMouseMove.js"></script>
-  <script src="js/funciones/onClipMoveMouseUp.js"></script>
-  <script src="js/funciones/onHandleResizeMove.js"></script>
-  <script src="js/funciones/onHandleResizeUp.js"></script>
-  <script src="js/funciones/playbackLoop.js"></script>
-  <script src="js/funciones/scheduleAllAudio.js"></script>
-  <script src="js/funciones/setPreviewTime.js"></script>
-  <script src="js/funciones/startClipMove.js"></script>
-  <script src="js/funciones/startHandleResize.js"></script>
-  <script src="js/funciones/stepFrames.js"></script>
-  <script src="js/funciones/transitions.js"></script>
-  <script src="js/funciones/updatePreviewAtTime.js"></script>
-  <script src="js/funciones/updatePreviewUI.js"></script>
+  <!-- Display para mostrar el tiempo actual -->
+  <div id="time-display">Tiempo actual: 00:00</div>
   
-  <!-- Inicialización de la aplicación -->
+  <!-- Controles de reproducción -->
+  <div id="controls">
+    <button onclick="playbackLoop()">Play</button>
+    <button onclick="stopPlayback()">Pause</button>
+    <button onclick="resetPlayback()">Reset</button>
+    <button onclick="stepFrames(-1)">Step Back</button>
+    <button onclick="stepFrames(1)">Step Forward</button>
+  </div>
+  
+  <!-- Área para soltar archivos (drag & drop) -->
+  <div id="file-drop-area" ondragover="event.preventDefault()" ondrop="handleFileDrop(event)">
+    Arrastra y suelta archivos aquí
+  </div>
+  
+  <!-- Elementos para previsualización (elige video o canvas según lo requerido) -->
+  <!-- Opción de previsualización con video (descomenta si se usará video) -->
+  <!-- <video id="preview-video" width="320" height="240" controls></video> -->
+  <!-- Opción de previsualización con canvas -->
+  <canvas id="preview-canvas" width="320" height="240"></canvas>
+  
+  <!-- Inclusión de módulos JavaScript -->
+  <script src="createTrackClip.js"></script>
+  <script src="decodeAudioFile.js"></script>
+  <script src="doRender.js"></script>
+  <script src="drawAudioWaveform.js"></script>
+  <script src="drawClipsAtTime.js"></script>
+  <script src="drawTimeScale.js"></script>
+  <script src="fileToArrayBuffer.js"></script>
+  <script src="getTimelineMaxTime.js"></script>
+  <script src="handleFileDrop.js"></script>
+  <script src="moveTimeCursorTo.js"></script>
+  <script src="onClipMoveMouseMove.js"></script>
+  <script src="onClipMoveMouseUp.js"></script>
+  <script src="onHandleResizeMove.js"></script>
+  <script src="onHandleResizeUp.js"></script>
+  <script src="playbackLoop.js"></script>
+  <script src="scheduleAllAudio.js"></script>
+  <script src="setPreviewTime.js"></script>
+  <script src="startClipMove.js"></script>
+  <script src="startHandleResize.js"></script>
+  <script src="stepFrames.js"></script>
+  <script src="transitions.js"></script>
+  <script src="updatePreviewAtTime.js"></script>
+  <script src="updatePreviewUI.js"></script>
+  
+  <!-- Inicialización tras la carga del DOM -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Inicializa la escala de tiempo, suponiendo que drawTimeScale(canvas) esté definida en drawTimeScale.js
-      const timelineCanvas = document.getElementById('timeline-canvas');
-      if (timelineCanvas && typeof drawTimeScale === 'function') {
-        drawTimeScale(timelineCanvas);
-      }
-      
-      // Configuración del arrastre y soltar para cargar archivos
-      const timelineContainer = document.getElementById('timeline-container');
-      if (timelineContainer && typeof handleFileDrop === 'function') {
-        timelineContainer.addEventListener('dragover', function(e) {
-          e.preventDefault();
-        });
-        timelineContainer.addEventListener('drop', function(e) {
-          e.preventDefault();
-          handleFileDrop(e);
-        });
-      }
-      
-      // Configuración de los controles de reproducción y renderizado
-      const playBtn = document.getElementById('play-btn');
-      if (playBtn && typeof playbackLoop === 'function') {
-        playBtn.addEventListener('click', playbackLoop);
-      }
-      
-      const pauseBtn = document.getElementById('pause-btn');
-      if (pauseBtn) {
-        pauseBtn.addEventListener('click', function() {
-          // Aquí debes integrar la lógica de pausa, ya sea paralizando playbackLoop o deteniendo el audio/video.
-          console.log('Pausa activada');
-        });
-      }
-      
-      const renderBtn = document.getElementById('render-btn');
-      if (renderBtn && typeof doRender === 'function') {
-        renderBtn.addEventListener('click', doRender);
-      }
+      // Actualiza la visualización de previsualización usando el cursor actual
+      updatePreviewUI();
+
+      // Si deseas programar la reproducción de audio u otros ajustes iniciales, puedes hacerlo aquí.
+      // Ejemplo: scheduleAllAudio();
     });
   </script>
 </body>
