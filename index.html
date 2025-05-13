@@ -2,29 +2,35 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Editor Multimedia – Preview de Vídeo</title>
+  <title>Editor Multimedia – Timeline y Preview</title>
   <!-- Enlace a la hoja de estilos ubicada en css/estilo.css -->
   <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
   <h1>Editor Multimedia</h1>
   
-  <!-- Área para arrastrar y soltar archivos -->
-  <div id="file-drop-area" ondragover="event.preventDefault()" ondrop="handleFileDrop(event)">
-    Arrastra y suelta archivos aquí
+  <!-- Zona para arrastrar y soltar archivos (para agregar clips a la timeline) -->
+  <div id="clip-drop-area" ondragover="event.preventDefault()" ondrop="handleClipDrop(event)">
+    Arrastra y suelta archivos en la zona de clips
   </div>
   
-  <!-- Display para mostrar el tiempo actual o la duración del video -->
-  <div id="time-display">Tiempo actual: 00:00</div>
+  <!-- Timeline: aquí se agregarán dinámicamente los clips -->
+  <div id="timeline-container" data-pixels-per-second="10">
+    <!-- Los elementos con clase "track-clip" se agregarán aquí -->
+  </div>
   
-  <!-- Contenedor para la previsualización -->
+  <!-- Vista Previa: se carga el clip seleccionado -->
   <div id="preview-container">
-    <!-- Elemento de previsualización: Video -->
-    <video id="preview-video" width="320" height="240" controls style="display: none;"></video>
-    <!-- Alternativamente, para audio se usaría un canvas y para imágenes un elemento img -->
-    <canvas id="preview-canvas" width="320" height="240" style="display: none;"></canvas>
-    <img id="preview-image" alt="Preview de imagen" style="display: none;" />
+    <!-- Elemento para video -->
+    <video id="preview-video" width="640" height="360" controls style="display: none;"></video>
+    <!-- Elemento para imagen -->
+    <img id="preview-image" alt="Preview de imagen" style="display: none;">
+    <!-- Elemento canvas para audio (opcional) -->
+    <canvas id="preview-canvas" width="640" height="360" style="display: none;"></canvas>
   </div>
+  
+  <!-- Display para mostrar la duración o tiempo actual -->
+  <div id="time-display">Tiempo actual: 00:00</div>
   
   <!-- Controles de reproducción -->
   <div id="controls">
@@ -36,7 +42,7 @@
     <button onclick="togglePopOutPreview()">Pop-out Preview</button>
   </div>
   
-  <!-- Inclusión de módulos JavaScript (se asume que estos archivos existen en js/funciones/) -->
+  <!-- Inclusión de módulos JavaScript (ruta: js/funciones/) -->
   <script src="js/funciones/createTrackClip.js"></script>
   <script src="js/funciones/decodeAudioFile.js"></script>
   <script src="js/funciones/doRender.js"></script>
@@ -61,36 +67,138 @@
   <script src="js/funciones/updatePreviewAtTime.js"></script>
   <script src="js/funciones/updatePreviewUI.js"></script>
   
-  <!-- Script inline para sobreescribir funciones de reproducción y agregar pop-out -->
+  <!-- Script inline para manejar la carga de múltiples archivos en la timeline -->
   <script>
     "use strict";
     
-    /**
-     * Formatea un tiempo (en segundos) a formato "mm:ss".
-     * @param {number} seconds - Tiempo en segundos.
-     * @returns {string} Tiempo formateado.
-     */
+    // Función para formatear tiempo a "mm:ss"
     function formatTime(seconds) {
       var min = Math.floor(seconds / 60);
       var sec = Math.floor(seconds % 60);
       return ("0" + min).slice(-2) + ":" + ("0" + sec).slice(-2);
     }
     
-    // Funciones de reproducción adaptadas al elemento de video
+    /**
+     * Maneja el evento "drop" únicamente para la zona de clips (en la timeline).
+     * Permite agregar múltiples archivos (video, imagen o audio) a la timeline.
+     */
+    function handleClipDrop(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      var files = event.dataTransfer.files;
+      if (!files || files.length === 0) {
+        console.warn("No se han arrastrado archivos.");
+        return;
+      }
+      // Procesa cada archivo
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        // Procesa solo videos, imágenes o audio
+        if (file.type.startsWith("video/") ||
+            file.type.startsWith("image/") ||
+            file.type.startsWith("audio/")) {
+          addClipToTimeline(file);
+        } else {
+          console.warn("Tipo de archivo no soportado: " + file.type);
+        }
+      }
+    }
+    
+    /**
+     * Agrega un nuevo clip a la timeline a partir de un archivo.
+     * Se crea un elemento con clase "track-clip" que se muestra en la timeline.
+     */
+    function addClipToTimeline(file) {
+      var timeline = document.getElementById("timeline-container");
+      var clipElem = document.createElement("div");
+      clipElem.className = "track-clip";
+      
+      // Crear URL para el archivo usando URL.createObjectURL
+      var fileURL = URL.createObjectURL(file);
+      // Almacenar datos en dataset para usarlos luego
+      clipElem.dataset.fileType = file.type;
+      clipElem.dataset.fileURL = fileURL;
+      clipElem.dataset.fileName = file.name;
+      
+      // Para la vista en la timeline simplemente se muestra un texto
+      if (file.type.startsWith("video/")) {
+        clipElem.textContent = "Video: " + file.name;
+      } else if (file.type.startsWith("image/")) {
+        clipElem.textContent = "Imagen: " + file.name;
+      } else if (file.type.startsWith("audio/")) {
+        clipElem.textContent = "Audio: " + file.name;
+      } else {
+        clipElem.textContent = file.name;
+      }
+      
+      // Al hacer clic en el clip, se carga en la vista previa
+      clipElem.addEventListener("click", function() {
+        // Quitar la clase "selected" de otros clips
+        var clips = document.querySelectorAll(".track-clip");
+        for (var j = 0; j < clips.length; j++) {
+          clips[j].classList.remove("selected");
+        }
+        clipElem.classList.add("selected");
+        loadClipIntoPreview(clipElem);
+      });
+      
+      timeline.appendChild(clipElem);
+    }
+    
+    /**
+     * Carga el clip seleccionado en el contenedor de vista previa.
+     * Dependiendo del tipo (video, imagen, audio) se muestra el elemento correspondiente.
+     */
+    function loadClipIntoPreview(clipElem) {
+      var type = clipElem.dataset.fileType;
+      var url = clipElem.dataset.fileURL;
+      var previewVideo = document.getElementById("preview-video");
+      var previewImage = document.getElementById("preview-image");
+      var previewCanvas = document.getElementById("preview-canvas");
+      
+      // Ocultar todos los elementos de preview
+      previewVideo.style.display = "none";
+      previewImage.style.display = "none";
+      previewCanvas.style.display = "none";
+      
+      if (type.startsWith("video/")) {
+        previewVideo.src = url;
+        previewVideo.style.display = "block";
+        previewVideo.load();
+        // Al cargar los metadatos, muestra la duración
+        previewVideo.addEventListener("loadedmetadata", function() {
+          document.getElementById("time-display").textContent = "Duración del video: " + formatTime(previewVideo.duration);
+        });
+      } else if (type.startsWith("image/")) {
+        previewImage.src = url;
+        previewImage.style.display = "block";
+        document.getElementById("time-display").textContent = "Imagen: " + clipElem.dataset.fileName;
+      } else if (type.startsWith("audio/")) {
+        document.getElementById("time-display").textContent = "Audio: " + clipElem.dataset.fileName;
+        previewCanvas.style.display = "block";
+        // Aquí podrías agregar la función para dibujar la forma de onda, si la implementas.
+      }
+    }
+    
+    // Asignar la función de drop para la zona de clips
+    window.handleClipDrop = handleClipDrop;
+  </script>
+  
+  <!-- Script inline para controles de reproducción adaptados al elemento de preview -->
+  <script>
+    "use strict";
     function playbackLoop() {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
         previewVideo.play();
       }
     }
-    
     function stopPlayback() {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
         previewVideo.pause();
       }
     }
-    
     function resetPlayback() {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
@@ -99,7 +207,6 @@
         document.getElementById("time-display").textContent = "Tiempo actual: 00:00";
       }
     }
-    
     function stepFrames(direction) {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
@@ -112,8 +219,6 @@
         document.getElementById("time-display").textContent = "Tiempo actual: " + formatTime(newTime);
       }
     }
-    
-    // Variable para el manejo del pop-out de la preview
     var popOutWindow = null;
     function togglePopOutPreview() {
       var previewContainer = document.getElementById("preview-container");
@@ -122,15 +227,12 @@
         alert("No hay video de previsualización para separar.");
         return;
       }
-      
       if (!popOutWindow || popOutWindow.closed) {
-        // Pop-out: mover el video a una nueva ventana.
-        popOutWindow = window.open("", "PreviewWindow", "width=400,height=300");
+        popOutWindow = window.open("", "PreviewWindow", "width=800,height=600");
         popOutWindow.document.write("<html><head><title>Preview</title></head><body style='margin:0;'></body></html>");
         previewContainer.removeChild(previewVideo);
         popOutWindow.document.body.appendChild(previewVideo);
       } else {
-        // Reintegrar el video al contenedor original y cerrar la ventana emergente.
         popOutWindow.document.body.removeChild(previewVideo);
         previewContainer.appendChild(previewVideo);
         popOutWindow.close();
@@ -138,7 +240,6 @@
       }
     }
     
-    // Asignamos las nuevas funciones globalmente para que los botones las invoquen.
     window.playbackLoop = playbackLoop;
     window.stopPlayback = stopPlayback;
     window.resetPlayback = resetPlayback;
@@ -146,108 +247,5 @@
     window.togglePopOutPreview = togglePopOutPreview;
   </script>
   
-  <!-- Script inline para el manejo de drop (actualizado para video, imagen y audio) -->
-  <script>
-    (function() {
-      "use strict";
-      
-      /**
-       * Maneja el evento "drop" para archivos.
-       * Para archivos de video: se asigna la URL al elemento de video; al cargar los metadatos se actualiza el display con su duración.
-       * Para imágenes y audio se usan los manejos respectivos.
-       * @param {DragEvent} event - El evento drop.
-       */
-      function handleFileDrop(event) {
-        event.preventDefault();
-        event.stopPropagation();
-  
-        var files = event.dataTransfer.files;
-        if (!files || files.length === 0) {
-          console.warn("No se han arrastrado archivos.");
-          return;
-        }
-  
-        for (var i = 0; i < files.length; i++) {
-          var file = files[i];
-          console.log("Archivo soltado:", file.name, file.type);
-  
-          // Para archivos de video:
-          if (file.type.startsWith("video/")) {
-            var previewVideo = document.getElementById("preview-video");
-            if (previewVideo) {
-              previewVideo.src = URL.createObjectURL(file);
-              previewVideo.style.display = "block";
-              previewVideo.load();
-  
-              // Ocultar otros elementos de previsualización
-              var previewImage = document.getElementById("preview-image");
-              if (previewImage) previewImage.style.display = "none";
-              var previewCanvas = document.getElementById("preview-canvas");
-              if (previewCanvas) previewCanvas.style.display = "none";
-  
-              // Al cargar los metadatos, actualiza el display con la duración del video:
-              previewVideo.addEventListener("loadedmetadata", function() {
-                var duration = previewVideo.duration;
-                var timeDisplay = document.getElementById("time-display");
-                if (timeDisplay) {
-                  timeDisplay.textContent = "Duración del video: " + formatTime(duration);
-                }
-              });
-            }
-          }
-          // Para archivos de imagen:
-          else if (file.type.startsWith("image/")) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-              var previewImage = document.getElementById("preview-image");
-              if (previewImage) {
-                previewImage.src = e.target.result;
-                previewImage.style.display = "block";
-              }
-              if (document.getElementById("preview-canvas"))
-                document.getElementById("preview-canvas").style.display = "none";
-              if (document.getElementById("preview-video"))
-                document.getElementById("preview-video").style.display = "none";
-            };
-            reader.readAsDataURL(file);
-          }
-          // Para archivos de audio:
-          else if (file.type.startsWith("audio/")) {
-            if (typeof decodeAudioFile === "function") {
-              decodeAudioFile(file)
-                .then(function(audioBuffer) {
-                  var waveformCanvas = document.getElementById("preview-canvas");
-                  if (waveformCanvas && typeof drawAudioWaveform === "function") {
-                    waveformCanvas.style.display = "block";
-                    var previewImage = document.getElementById("preview-image");
-                    if (previewImage) previewImage.style.display = "none";
-                    var previewVideo = document.getElementById("preview-video");
-                    if (previewVideo) previewVideo.style.display = "none";
-                    drawAudioWaveform(audioBuffer, waveformCanvas);
-                  }
-                })
-                .catch(function(error) {
-                  console.error("Error al decodificar el audio:", error);
-                });
-            } else {
-              console.error("Función decodeAudioFile no definida.");
-            }
-          }
-          else {
-            console.warn("Tipo de archivo no soportado: " + file.type);
-          }
-        }
-      }
-      
-      window.handleFileDrop = handleFileDrop;
-    })();
-  </script>
-  
-  <!-- Inicialización tras cargar el DOM -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Si se requiere alguna inicialización adicional, se puede hacer aquí.
-    });
-  </script>
 </body>
 </html>
