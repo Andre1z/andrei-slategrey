@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor Multimedia – Preview de Vídeo</title>
-  <!-- Enlace a la hoja de estilos -->
+  <!-- Enlace a la hoja de estilos ubicada en css/estilo.css -->
   <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
@@ -14,20 +14,16 @@
     Arrastra y suelta archivos aquí
   </div>
   
-  <!-- Contenedor para la previsualización (video) -->
-  <div id="preview-container">
-    <video id="preview-video" width="320" height="240" controls style="display: none;"></video>
-    <!-- Alternativamente, se pueden usar el canvas o la imagen para audio o imágenes -->
-    <canvas id="preview-canvas" width="320" height="240" style="display: none;"></canvas>
-    <img id="preview-image" alt="Preview de imagen" style="display: none;" />
-  </div>
-  
   <!-- Display para mostrar el tiempo actual o la duración del video -->
   <div id="time-display">Tiempo actual: 00:00</div>
   
-  <!-- Contenedor de la Timeline (ahora ubicado debajo de la duración del video) -->
-  <div id="timeline-container" data-pixels-per-second="10">
-    <div id="time-cursor"></div>
+  <!-- Contenedor para la previsualización -->
+  <div id="preview-container">
+    <!-- Elemento de previsualización: Video -->
+    <video id="preview-video" width="320" height="240" controls style="display: none;"></video>
+    <!-- Alternativamente, para audio se usaría un canvas y para imágenes un elemento img -->
+    <canvas id="preview-canvas" width="320" height="240" style="display: none;"></canvas>
+    <img id="preview-image" alt="Preview de imagen" style="display: none;" />
   </div>
   
   <!-- Controles de reproducción -->
@@ -40,7 +36,7 @@
     <button onclick="togglePopOutPreview()">Pop-out Preview</button>
   </div>
   
-  <!-- Inclusión de módulos JavaScript desde js/funciones/ -->
+  <!-- Inclusión de módulos JavaScript (se asume que estos archivos existen en js/funciones/) -->
   <script src="js/funciones/createTrackClip.js"></script>
   <script src="js/funciones/decodeAudioFile.js"></script>
   <script src="js/funciones/doRender.js"></script>
@@ -70,7 +66,7 @@
     "use strict";
     
     /**
-     * Función auxiliar para formatear tiempo (mm:ss)
+     * Formatea un tiempo (en segundos) a formato "mm:ss".
      * @param {number} seconds - Tiempo en segundos.
      * @returns {string} Tiempo formateado.
      */
@@ -80,13 +76,11 @@
       return ("0" + min).slice(-2) + ":" + ("0" + sec).slice(-2);
     }
     
-    // Control de reproducción sobre el video
+    // Funciones de reproducción adaptadas al elemento de video
     function playbackLoop() {
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
         previewVideo.play();
-      } else if (typeof window.playbackLoop === "function") {
-        window.playbackLoop();
       }
     }
     
@@ -94,8 +88,6 @@
       var previewVideo = document.getElementById("preview-video");
       if (previewVideo && previewVideo.style.display !== "none") {
         previewVideo.pause();
-      } else if (typeof window.stopPlayback === "function") {
-        window.stopPlayback();
       }
     }
     
@@ -105,8 +97,6 @@
         previewVideo.pause();
         previewVideo.currentTime = 0;
         document.getElementById("time-display").textContent = "Tiempo actual: 00:00";
-      } else if (typeof window.resetPlayback === "function") {
-        window.resetPlayback();
       }
     }
     
@@ -117,15 +107,13 @@
         var step = 1.0 / fps;
         var newTime = previewVideo.currentTime + direction * step;
         if (newTime < 0) newTime = 0;
-        if (newTime > previewVideo.duration) newTime = previewVideo.duration;
+        if (previewVideo.duration && newTime > previewVideo.duration) newTime = previewVideo.duration;
         previewVideo.currentTime = newTime;
         document.getElementById("time-display").textContent = "Tiempo actual: " + formatTime(newTime);
-      } else if (typeof window.stepFrames === "function") {
-        window.stepFrames(direction);
       }
     }
     
-    // Funcionalidad "pop-out preview": permite sacar el video a otra ventana y luego reintegrarlo.
+    // Variable para el manejo del pop-out de la preview
     var popOutWindow = null;
     function togglePopOutPreview() {
       var previewContainer = document.getElementById("preview-container");
@@ -136,14 +124,13 @@
       }
       
       if (!popOutWindow || popOutWindow.closed) {
-        // Pop out: mover el video a una nueva ventana.
+        // Pop-out: mover el video a una nueva ventana.
         popOutWindow = window.open("", "PreviewWindow", "width=400,height=300");
         popOutWindow.document.write("<html><head><title>Preview</title></head><body style='margin:0;'></body></html>");
-        // Mueve el video al nuevo documento.
         previewContainer.removeChild(previewVideo);
         popOutWindow.document.body.appendChild(previewVideo);
       } else {
-        // Reintegrar: volver a poner el video en el contenedor original y cerrar la ventana.
+        // Reintegrar el video al contenedor original y cerrar la ventana emergente.
         popOutWindow.document.body.removeChild(previewVideo);
         previewContainer.appendChild(previewVideo);
         popOutWindow.close();
@@ -151,7 +138,7 @@
       }
     }
     
-    // Se sobreescriben las funciones globales para que los botones llamen a las versiones aquí definidas.
+    // Asignamos las nuevas funciones globalmente para que los botones las invoquen.
     window.playbackLoop = playbackLoop;
     window.stopPlayback = stopPlayback;
     window.resetPlayback = resetPlayback;
@@ -159,18 +146,15 @@
     window.togglePopOutPreview = togglePopOutPreview;
   </script>
   
-  <!-- Script inline para manejo de drop (actualizado para videos, imágenes y audio) -->
+  <!-- Script inline para el manejo de drop (actualizado para video, imagen y audio) -->
   <script>
     (function() {
       "use strict";
       
       /**
        * Maneja el evento "drop" para archivos.
-       * Para archivos de video:
-       *  - Se asigna la URL al elemento <video> de previsualización.
-       *  - Al cargar los metadatos, se actualiza el display con la duración del video.
-       * Para imágenes y audio se aplican los manejos respectivos.
-       *
+       * Para archivos de video: se asigna la URL al elemento de video; al cargar los metadatos se actualiza el display con su duración.
+       * Para imágenes y audio se usan los manejos respectivos.
        * @param {DragEvent} event - El evento drop.
        */
       function handleFileDrop(event) {
@@ -187,7 +171,7 @@
           var file = files[i];
           console.log("Archivo soltado:", file.name, file.type);
   
-          // Manejo para archivos de video
+          // Para archivos de video:
           if (file.type.startsWith("video/")) {
             var previewVideo = document.getElementById("preview-video");
             if (previewVideo) {
@@ -195,13 +179,13 @@
               previewVideo.style.display = "block";
               previewVideo.load();
   
-              // Ocultar otros elementos de previsualización:
+              // Ocultar otros elementos de previsualización
               var previewImage = document.getElementById("preview-image");
               if (previewImage) previewImage.style.display = "none";
               var previewCanvas = document.getElementById("preview-canvas");
               if (previewCanvas) previewCanvas.style.display = "none";
   
-              // Actualizar el display con la duración al cargar metadatos:
+              // Al cargar los metadatos, actualiza el display con la duración del video:
               previewVideo.addEventListener("loadedmetadata", function() {
                 var duration = previewVideo.duration;
                 var timeDisplay = document.getElementById("time-display");
@@ -211,7 +195,7 @@
               });
             }
           }
-          // Manejo para archivos de imagen
+          // Para archivos de imagen:
           else if (file.type.startsWith("image/")) {
             var reader = new FileReader();
             reader.onload = function(e) {
@@ -227,7 +211,7 @@
             };
             reader.readAsDataURL(file);
           }
-          // Manejo para archivos de audio
+          // Para archivos de audio:
           else if (file.type.startsWith("audio/")) {
             if (typeof decodeAudioFile === "function") {
               decodeAudioFile(file)
@@ -239,7 +223,6 @@
                     if (previewImage) previewImage.style.display = "none";
                     var previewVideo = document.getElementById("preview-video");
                     if (previewVideo) previewVideo.style.display = "none";
-  
                     drawAudioWaveform(audioBuffer, waveformCanvas);
                   }
                 })
@@ -263,8 +246,7 @@
   <!-- Inicialización tras cargar el DOM -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Actualizar la previsualización (por ejemplo, la posición del cursor en la timeline)
-      updatePreviewUI();
+      // Si se requiere alguna inicialización adicional, se puede hacer aquí.
     });
   </script>
 </body>
