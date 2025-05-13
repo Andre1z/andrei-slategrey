@@ -20,6 +20,7 @@ o DaVinci Resolve), ofreciendo funcionalidades como:
 
 Estructura del Proyecto
 ------------------------
+```
 C:\xampp\htdocs\andrei-slategrey\andrei-slategrey
 ├── .gitattributes
 ├── README.md           <-- Este archivo
@@ -58,7 +59,7 @@ C:\xampp\htdocs\andrei-slategrey\andrei-slategrey
 ├── monitor.html        <-- Ventana Monitor para visualizar estado/logs del editor.
 ├── parameters.html     <-- Ventana de Parámetros para configuración global.
 └── slategrey.png       <-- Imagen de logo utilizada en el encabezado.
-  
+```  
 Requerimientos
 --------------
 • Servidor local (por ejemplo, XAMPP) para ejecutar PHP y servir los archivos.
