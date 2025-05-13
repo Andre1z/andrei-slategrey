@@ -51,7 +51,7 @@ h1 {
   font-size: 1.5rem;
 }
 
-/* Zona para arrastrar y soltar archivos */
+/* Zona para arrastrar y soltar archivos (Media Panel) */
 #clip-drop-area {
   border: 2px dashed #3a3a3a;
   padding: 20px;
@@ -92,7 +92,7 @@ h1 {
   max-width: 100%;
   border: 1px solid #3a3a3a;
   border-radius: 3px;
-  display: none;
+  display: none; /* Se mostrarán según el clip seleccionado */
 }
 
 /* Time Display (Scrubber) */
@@ -191,10 +191,10 @@ h1 {
 
 .track-clip.selected {
   border-color: #007acc;
-  background-color: #1e1e1e;
+  background-color: #1e1f1f;
 }
 
-/* Handle para redimensionar */
+/* Handle para redimensionar (ajustar longitud) del clip */
 .handle-resize {
   position: absolute;
   right: 0;
