@@ -47,8 +47,9 @@
       return;
     }
 
-    // Convertir la posición (left) del cursor a tiempo en segundos.
-    var currentLeft = parseFloat(timeCursor.style.left) || 0;
+    // Usar getComputedStyle para obtener el estilo aplicado al cursor.
+    var computedStyle = window.getComputedStyle(timeCursor);
+    var currentLeft = parseFloat(computedStyle.left) || 0;
     var currentTime = currentLeft / pixelsPerSecond;
 
     // Actualizar el display de tiempo, si existe.
