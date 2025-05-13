@@ -3,76 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor Multimedia - Drag & Drop Preview</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #fafafa;
-      margin: 0;
-      padding: 0;
-    }
-    h1 {
-      text-align: center;
-      margin-top: 20px;
-    }
-    /* Contenedor de la línea de tiempo */
-    #timeline-container {
-      position: relative;
-      width: 800px;
-      height: 80px;
-      margin: 20px auto;
-      border: 1px solid #ccc;
-      background-color: #f4f4f4;
-    }
-    /* Cursor de la línea de tiempo */
-    #time-cursor {
-      position: absolute;
-      top: 0;
-      width: 2px;
-      height: 100%;
-      background-color: red;
-      left: 100px; /* Valor inicial para demostrar */
-    }
-    /* Display para mostrar el tiempo actual */
-    #time-display {
-      text-align: center;
-      font-size: 18px;
-      margin: 10px;
-    }
-    /* Controles de reproducción */
-    #controls {
-      text-align: center;
-      margin: 10px;
-    }
-    #controls button {
-      padding: 8px 12px;
-      margin: 0 5px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    /* Área de drag & drop */
-    #file-drop-area {
-      border: 2px dashed #aaa;
-      width: 400px;
-      margin: 20px auto;
-      padding: 20px;
-      text-align: center;
-      color: #777;
-      background-color: #fff;
-    }
-    /* Estilos para la previsualización */
-    #preview-canvas, #preview-video, #preview-image {
-      display: block;
-      margin: 20px auto;
-      max-width: 320px;
-      border: 1px solid #ccc;
-    }
-    #preview-canvas, #preview-video {
-      display: none;
-    }
-    #preview-image {
-      display: none;
-    }
-  </style>
+  <link rel="stylesheet" type="text/css" href="css/estilo.css">
 </head>
 <body>
   <h1>Editor Multimedia</h1>
