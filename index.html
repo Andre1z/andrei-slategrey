@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Editor Multimedia</title>
+  <title>Editor Multimedia - Drag & Drop Preview</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background-color: #fafafa;
       margin: 0;
       padding: 0;
-      background-color: #fafafa;
     }
     h1 {
       text-align: center;
@@ -30,8 +30,7 @@
       width: 2px;
       height: 100%;
       background-color: red;
-      /* Posición inicial (en píxeles, que se convertirá a tiempo en segundos) */
-      left: 100px;
+      left: 100px; /* Valor inicial para demostrar */
     }
     /* Display para mostrar el tiempo actual */
     #time-display {
@@ -61,22 +60,29 @@
       background-color: #fff;
     }
     /* Estilos para la previsualización */
-    #preview-canvas, #preview-video {
+    #preview-canvas, #preview-video, #preview-image {
       display: block;
       margin: 20px auto;
+      max-width: 320px;
       border: 1px solid #ccc;
+    }
+    #preview-canvas, #preview-video {
+      display: none;
+    }
+    #preview-image {
+      display: none;
     }
   </style>
 </head>
 <body>
   <h1>Editor Multimedia</h1>
   
-  <!-- Contenedor de la línea de tiempo con el atributo de conversión: píxeles/segundo -->
+  <!-- Contenedor de la línea de tiempo -->
   <div id="timeline-container" data-pixels-per-second="10">
-      <div id="time-cursor"></div>
+    <div id="time-cursor"></div>
   </div>
   
-  <!-- Display para mostrar el tiempo actual -->
+  <!-- Display del tiempo actual -->
   <div id="time-display">Tiempo actual: 00:00</div>
   
   <!-- Controles de reproducción -->
@@ -88,18 +94,119 @@
     <button onclick="stepFrames(1)">Step Forward</button>
   </div>
   
-  <!-- Área para soltar archivos (drag & drop) -->
+  <!-- Área para soltar archivos -->
   <div id="file-drop-area" ondragover="event.preventDefault()" ondrop="handleFileDrop(event)">
     Arrastra y suelta archivos aquí
   </div>
   
-  <!-- Elementos para previsualización (elige video o canvas según lo requerido) -->
-  <!-- Opción de previsualización con video (descomenta si se usará video) -->
-  <!-- <video id="preview-video" width="320" height="240" controls></video> -->
-  <!-- Opción de previsualización con canvas -->
+  <!-- Elementos para previsualización -->
+  <!-- Previsualización de video -->
+  <video id="preview-video" width="320" height="240" controls></video>
+  <!-- Previsualización de audio (por ejemplo, forma de onda en canvas) -->
   <canvas id="preview-canvas" width="320" height="240"></canvas>
+  <!-- Previsualización de imagen -->
+  <img id="preview-image" alt="Preview de imagen" />
   
-  <!-- Inclusión de módulos JavaScript -->
+  <!-- Inclusión de módulos JavaScript (se asume que estos archivos existen y funcionan) -->
+  <script src="createTrackClip.js"></script>
+  <script src="decodeAudioFile.js"></script>
+  <script src="doRender.js"></script>
+  <script src="drawAudioWaveform.js"></script>
+  <script src="drawClipsAtTime.js"></script>
+  <script src="drawTimeScale.js"></script>
+  <script src="fileToArrayBuffer.js"></script>
+  <script src="getTimelineMaxTime.js"></script>
+  <!-- Usamos el handleFileDrop actualizado a continuación -->
+  <script>
+  (function() {
+    "use strict";
+
+    /**
+     * Maneja el evento "drop" para archivos.
+     * Según el tipo de archivo, se realiza una acción:
+     * - Imagen: se lee como Data URL y se asigna al elemento de previsualización "preview-image".
+     * - Audio: se decodifica (usando decodeAudioFile) y se renderiza la forma de onda en "preview-canvas".
+     * - Video: se crea una URL del objeto y se asigna a "preview-video".
+     */
+    function handleFileDrop(event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      var files = event.dataTransfer.files;
+      if (!files || files.length === 0) {
+        console.warn("No se han arrastrado archivos.");
+        return;
+      }
+
+      // Itera sobre los archivos soltados.
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        console.log("Archivo soltado:", file.name, file.type);
+
+        // Si es imagen.
+        if (file.type.startsWith("image/")) {
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            var previewImage = document.getElementById("preview-image");
+            if (previewImage) {
+              previewImage.src = e.target.result;
+              previewImage.style.display = "block";
+            }
+            // Ocultar otras previsualizaciones.
+            var previewCanvas = document.getElementById("preview-canvas");
+            if (previewCanvas) previewCanvas.style.display = "none";
+            var previewVideo = document.getElementById("preview-video");
+            if (previewVideo) previewVideo.style.display = "none";
+          };
+          reader.readAsDataURL(file);
+        }
+        // Si es audio.
+        else if (file.type.startsWith("audio/")) {
+          if (typeof decodeAudioFile === "function") {
+            decodeAudioFile(file)
+              .then(function(audioBuffer) {
+                console.log("Audio decodificado:", audioBuffer);
+                var waveformCanvas = document.getElementById("preview-canvas");
+                if (waveformCanvas && typeof drawAudioWaveform === "function") {
+                  waveformCanvas.style.display = "block";
+                  // Ocultar otros elementos.
+                  var previewImage = document.getElementById("preview-image");
+                  if (previewImage) previewImage.style.display = "none";
+                  var previewVideo = document.getElementById("preview-video");
+                  if (previewVideo) previewVideo.style.display = "none";
+
+                  drawAudioWaveform(audioBuffer, waveformCanvas);
+                }
+              })
+              .catch(function(error) {
+                console.error("Error al decodificar el audio:", error);
+              });
+          } else {
+            console.error("Función decodeAudioFile no definida.");
+          }
+        }
+        // Si es video.
+        else if (file.type.startsWith("video/")) {
+          var previewVideo = document.getElementById("preview-video");
+          if (previewVideo) {
+            previewVideo.src = URL.createObjectURL(file);
+            previewVideo.style.display = "block";
+            // Ocultar otros elementos.
+            var previewImage = document.getElementById("preview-image");
+            if (previewImage) previewImage.style.display = "none";
+            var previewCanvas = document.getElementById("preview-canvas");
+            if (previewCanvas) previewCanvas.style.display = "none";
+          }
+        }
+        else {
+          console.warn("Tipo de archivo no soportado: " + file.type);
+        }
+      }
+    }
+    window.handleFileDrop = handleFileDrop;
+  })();
+  </script>
+  <!-- Resto de archivos JS -->
   <script src="js/funciones/createTrackClip.js"></script>
   <script src="js/funciones/decodeAudioFile.js"></script>
   <script src="js/funciones/doRender.js"></script>
@@ -124,14 +231,12 @@
   <script src="js/funciones/updatePreviewAtTime.js"></script>
   <script src="js/funciones/updatePreviewUI.js"></script>
   
-  <!-- Inicialización tras la carga del DOM -->
+  <!-- Inicialización tras cargar el DOM -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Actualiza la visualización de previsualización usando el cursor actual
+      // Actualiza la previsualización según el cursor actual
       updatePreviewUI();
-
-      // Si deseas programar la reproducción de audio u otros ajustes iniciales, puedes hacerlo aquí.
-      // Ejemplo: scheduleAllAudio();
+      // Aquí podrías invocar otros ajustes iniciales, p.ej.: scheduleAllAudio();
     });
   </script>
 </body>
