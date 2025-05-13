@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor Multimedia – Preview de Vídeo</title>
-  <!-- Enlaza tu hoja de estilos ubicada en /css/estilo.css -->
+  <!-- Enlace a la hoja de estilos -->
   <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
   <h1>Editor Multimedia</h1>
   
-  <!-- Contenedor de la línea de tiempo (se le asigna el atributo para la conversión de píxeles a segundos) -->
+  <!-- Contenedor de la línea de tiempo -->
   <div id="timeline-container" data-pixels-per-second="10">
     <div id="time-cursor"></div>
   </div>
@@ -24,6 +24,7 @@
     <button onclick="resetPlayback()">Reset</button>
     <button onclick="stepFrames(-1)">Step Back</button>
     <button onclick="stepFrames(1)">Step Forward</button>
+    <button onclick="togglePopOutPreview()">Pop-out Preview</button>
   </div>
   
   <!-- Área para arrastrar y soltar archivos -->
@@ -31,15 +32,17 @@
     Arrastra y suelta archivos aquí
   </div>
   
-  <!-- Elementos de previsualización -->
-  <!-- Video -->
-  <video id="preview-video" width="320" height="240" controls></video>
-  <!-- Canvas para audio (por ejemplo, para dibujar una forma de onda) -->
-  <canvas id="preview-canvas" width="320" height="240"></canvas>
-  <!-- Imagen -->
-  <img id="preview-image" alt="Preview de imagen" />
+  <!-- Contenedor para la previsualización (se usa para reubicar el elemento en caso de pop-out) -->
+  <div id="preview-container">
+    <!-- Elemento de previsualización de video -->
+    <video id="preview-video" width="320" height="240" controls style="display: none;"></video>
+  </div>
   
-  <!-- Inclusión de módulos JavaScript. Asegúrate de que estos archivos existan en la ruta /js/funciones/ -->
+  <!-- Elementos de previsualización alternativos -->
+  <canvas id="preview-canvas" width="320" height="240" style="display: none;"></canvas>
+  <img id="preview-image" alt="Preview de imagen" style="display: none;" />
+  
+  <!-- Inclusión de módulos JavaScript desde js/funciones/ -->
   <script src="js/funciones/createTrackClip.js"></script>
   <script src="js/funciones/decodeAudioFile.js"></script>
   <script src="js/funciones/doRender.js"></script>
@@ -64,30 +67,113 @@
   <script src="js/funciones/updatePreviewAtTime.js"></script>
   <script src="js/funciones/updatePreviewUI.js"></script>
   
-  <!-- Script inline para manejar el drop y actualizar la previsualización para archivos de video, imagen y audio -->
+  <!-- Script inline para sobreescribir funciones de reproducción y agregar pop-out -->
+  <script>
+    "use strict";
+    
+    /**
+     * Función auxiliar para formatear tiempo (mm:ss)
+     * @param {number} seconds - Tiempo en segundos.
+     * @returns {string} Tiempo formateado.
+     */
+    function formatTime(seconds) {
+      var min = Math.floor(seconds / 60);
+      var sec = Math.floor(seconds % 60);
+      return ("0" + min).slice(-2) + ":" + ("0" + sec).slice(-2);
+    }
+    
+    // Sobreescritura de los controles de reproducción para funcionar con el video cargado
+    function playbackLoop() {
+      var previewVideo = document.getElementById("preview-video");
+      if (previewVideo && previewVideo.style.display !== "none") {
+        previewVideo.play();
+      } else if (typeof window.playbackLoop === "function") {
+        window.playbackLoop();
+      }
+    }
+    
+    function stopPlayback() {
+      var previewVideo = document.getElementById("preview-video");
+      if (previewVideo && previewVideo.style.display !== "none") {
+        previewVideo.pause();
+      } else if (typeof window.stopPlayback === "function") {
+        window.stopPlayback();
+      }
+    }
+    
+    function resetPlayback() {
+      var previewVideo = document.getElementById("preview-video");
+      if (previewVideo && previewVideo.style.display !== "none") {
+        previewVideo.pause();
+        previewVideo.currentTime = 0;
+        document.getElementById("time-display").textContent = "Tiempo actual: 00:00";
+      } else if (typeof window.resetPlayback === "function") {
+        window.resetPlayback();
+      }
+    }
+    
+    function stepFrames(direction) {
+      var previewVideo = document.getElementById("preview-video");
+      if (previewVideo && previewVideo.style.display !== "none") {
+        var fps = 30; // valor por defecto
+        var step = 1.0 / fps;
+        var newTime = previewVideo.currentTime + direction * step;
+        if (newTime < 0) newTime = 0;
+        if (newTime > previewVideo.duration) newTime = previewVideo.duration;
+        previewVideo.currentTime = newTime;
+        document.getElementById("time-display").textContent = "Tiempo actual: " + formatTime(newTime);
+      } else if (typeof window.stepFrames === "function") {
+        window.stepFrames(direction);
+      }
+    }
+    
+    // Funcionalidad para "pop-out preview": sacar la vista previa (video) a otra ventana o reintegrarlo.
+    var popOutWindow = null;
+    function togglePopOutPreview() {
+      var previewContainer = document.getElementById("preview-container");
+      var previewVideo = document.getElementById("preview-video");
+      if (!previewVideo || previewVideo.style.display === "none") {
+        alert("No hay video de previsualización para separar.");
+        return;
+      }
+      
+      if (!popOutWindow || popOutWindow.closed) {
+        // Pop out: mover el video a una nueva ventana.
+        popOutWindow = window.open("", "PreviewWindow", "width=400,height=300");
+        popOutWindow.document.write("<html><head><title>Preview</title></head><body></body></html>");
+        // Mueve el video al nuevo documento.
+        previewContainer.removeChild(previewVideo);
+        popOutWindow.document.body.appendChild(previewVideo);
+        popOutWindow.document.body.style.margin = "0";
+      } else {
+        // Volver el video al contenedor original y cerrar la ventana.
+        popOutWindow.document.body.removeChild(previewVideo);
+        previewContainer.appendChild(previewVideo);
+        popOutWindow.close();
+        popOutWindow = null;
+      }
+    }
+    
+    // Se sobreescriben las funciones globales para que los botones llamen a las versiones aquí definidas
+    window.playbackLoop = playbackLoop;
+    window.stopPlayback = stopPlayback;
+    window.resetPlayback = resetPlayback;
+    window.stepFrames = stepFrames;
+    window.togglePopOutPreview = togglePopOutPreview;
+  </script>
+  
+  <!-- Script inline para el manejo de drop personalizado (se sobrescribe o extiende el existente) -->
   <script>
     (function() {
       "use strict";
       
       /**
-       * Convierte un número de segundos en un string con formato "mm:ss".
-       * @param {number} seconds - Tiempo en segundos.
-       * @returns {string} Tiempo formateado.
-       */
-      function formatTime(seconds) {
-        var min = Math.floor(seconds / 60);
-        var sec = Math.floor(seconds % 60);
-        return ("0" + min).slice(-2) + ":" + ("0" + sec).slice(-2);
-      }
-      
-      /**
        * Maneja el evento "drop" para archivos.
-       * Para archivos de video:
-       *   - Crea una URL para el objeto y la asigna al elemento <video> de previsualización.
-       *   - Cuando se cargan los metadatos, se actualiza el display con la duración del video.
-       * Para imágenes y audio se aplican otros manejos.
-       *
-       * @param {DragEvent} event - El evento de soltado.
+       * Para vídeos: se asigna la URL al elemento de previsualización;
+       * al cargar los metadatos, se actualiza el display con la duración.
+       * Para imágenes y audio se usan los manejos respectivos.
+       * 
+       * @param {DragEvent} event - El evento drop.
        */
       function handleFileDrop(event) {
         event.preventDefault();
@@ -103,7 +189,7 @@
           var file = files[i];
           console.log("Archivo soltado:", file.name, file.type);
   
-          // Manejo para archivos de video:
+          // Manejo para archivos de video
           if (file.type.startsWith("video/")) {
             var previewVideo = document.getElementById("preview-video");
             if (previewVideo) {
@@ -111,13 +197,13 @@
               previewVideo.style.display = "block";
               previewVideo.load();
   
-              // Ocultar otros elementos de previsualización:
+              // Ocultar otros elementos de preview
               var previewImage = document.getElementById("preview-image");
               if (previewImage) previewImage.style.display = "none";
               var previewCanvas = document.getElementById("preview-canvas");
               if (previewCanvas) previewCanvas.style.display = "none";
   
-              // Al cargar los metadatos, actualizar el display con la duración del video:
+              // Actualizar el display con la duración al cargar metadatos
               previewVideo.addEventListener("loadedmetadata", function() {
                 var duration = previewVideo.duration;
                 var timeDisplay = document.getElementById("time-display");
@@ -127,7 +213,7 @@
               });
             }
           }
-          // Manejo para archivos de imagen:
+          // Manejo para archivos de imagen
           else if (file.type.startsWith("image/")) {
             var reader = new FileReader();
             reader.onload = function(e) {
@@ -136,14 +222,14 @@
                 previewImage.src = e.target.result;
                 previewImage.style.display = "block";
               }
-              var previewCanvas = document.getElementById("preview-canvas");
-              if (previewCanvas) previewCanvas.style.display = "none";
-              var previewVideo = document.getElementById("preview-video");
-              if (previewVideo) previewVideo.style.display = "none";
+              if (document.getElementById("preview-canvas"))
+                document.getElementById("preview-canvas").style.display = "none";
+              if (document.getElementById("preview-video"))
+                document.getElementById("preview-video").style.display = "none";
             };
             reader.readAsDataURL(file);
           }
-          // Manejo para archivos de audio:
+          // Manejo para archivos de audio
           else if (file.type.startsWith("audio/")) {
             if (typeof decodeAudioFile === "function") {
               decodeAudioFile(file)
@@ -172,6 +258,7 @@
         }
       }
       
+      // Aseguramos que se use esta función en vez de la implementada previamente.
       window.handleFileDrop = handleFileDrop;
     })();
   </script>
@@ -179,8 +266,9 @@
   <!-- Inicialización tras cargar el DOM -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Actualiza la previsualización según la posición actual del cursor.
+      // Actualiza la previsualización según la posición del cursor
       updatePreviewUI();
+      // Aquí podrías invocar otras inicializaciones, p.ej. scheduleAllAudio();
     });
   </script>
 </body>
