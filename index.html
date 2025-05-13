@@ -32,15 +32,13 @@
         <canvas id="preview-canvas" width="640" height="360" style="display: none;"></canvas>
       </div>
       
-      <!-- Time Display con aguja roja (Scrubber) -->
+      <!-- Time Display (Scrubber) con aguja roja -->
       <div id="time-display">
-        <!-- Aguja roja -->
         <div id="time-needle"></div>
-        <!-- Valor del tiempo actual -->
         <span id="time-value">Tiempo actual: 00:00</span>
       </div>
       
-      <!-- Controles de reproducción (ahora actúan sobre la aguja) -->
+      <!-- Controles de reproducción -->
       <div id="controls">
         <button onclick="playbackLoop()">Play</button>
         <button onclick="stopPlayback()">Pause</button>
@@ -50,10 +48,10 @@
         <button onclick="togglePopOutPreview()">Pop-out Preview</button>
       </div>
       
-      <!-- Timeline de Clips (con marcas de tiempo) -->
+      <!-- Timeline (la secuencia completa) -->
       <div id="timeline-container" data-pixels-per-second="10" onclick="fitTimeline()">
         <div id="timeline-content">
-          <!-- Clips se agregan dinámicamente -->
+          <!-- Los clips se agregan dinámicamente en orden -->
         </div>
         <div id="time-markers"></div>
       </div>
@@ -85,29 +83,32 @@
   <script src="js/funciones/updatePreviewAtTime.js"></script>
   <script src="js/funciones/updatePreviewUI.js"></script>
   
-  <!-- Script inline: Manejo de Clips y Timeline -->
+  <!-- Script inline: Manejo de la secuencia global -->
   <script>
     "use strict";
     
-    // Variable global para almacenar el clip seleccionado
+    /* Variable global para el clip actualmente seleccionado 
+       (la secuencia se compone de los clips en orden concatenado) */
     window.selectedClip = null;
     
-    // Formatea segundos a "mm:ss"
+    /* Formatea segundos a "mm:ss" */
     function formatTime(seconds) {
       var min = Math.floor(seconds / 60);
       var sec = Math.floor(seconds % 60);
       return ("0" + min).slice(-2) + ":" + ("0" + sec).slice(-2);
     }
     
-    /***********************
+    /****************************
      * Manejo de Clips y Timeline
-     ***********************/
+     ****************************/
     
+    // Al soltar archivos desde el Media Panel se agregan a la timeline
     function handleClipDrop(event) {
       event.preventDefault();
       event.stopPropagation();
       var files = event.dataTransfer.files;
       if (!files || files.length === 0) return;
+      
       for (var i = 0; i < files.length; i++) {
         var file = files[i];
         if (file.type.startsWith("video/") ||
@@ -118,14 +119,23 @@
           console.warn("Tipo de archivo no soportado: " + file.type);
         }
       }
+      
+      // Si aún no hay clip seleccionado, selecciona el primero
+      if(!window.selectedClip) {
+        var firstClip = document.querySelector("#timeline-content .track-clip");
+        if(firstClip) {
+          firstClip.click();
+        }
+      }
       drawTimeMarkers();
     }
     
+    // Agrega un clip a la timeline y lo carga automáticamente si es el primero
     function addClipToTimeline(file) {
       var timelineContent = document.getElementById("timeline-content");
       var clipElem = document.createElement("div");
       clipElem.className = "track-clip";
-      clipElem.style.width = "120px";  // Ancho inicial
+      clipElem.style.width = "120px"; // Ancho inicial
       var timelineContainer = document.getElementById("timeline-container");
       var pps = parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
       clipElem.dataset.duration = (120 / pps);
@@ -143,6 +153,7 @@
         clipElem.textContent = "Audio: " + file.name;
       }
       
+      // Agrega un handle que permite redimensionar el clip (ajustar duración)
       var resizeHandle = document.createElement("div");
       resizeHandle.className = "handle-resize";
       resizeHandle.addEventListener("mousedown", function(event) {
@@ -150,18 +161,21 @@
       });
       clipElem.appendChild(resizeHandle);
       
+      // Al agregar el clip, se carga automáticamente en el preview
       clipElem.addEventListener("click", function() {
         var clips = document.querySelectorAll(".track-clip");
         clips.forEach(function(c) { c.classList.remove("selected"); });
         clipElem.classList.add("selected");
         window.selectedClip = clipElem;
-        loadClipIntoPreview(clipElem);
+        loadClipIntoPreview(clipElem, 0);
       });
       
       timelineContent.appendChild(clipElem);
     }
     
-    function loadClipIntoPreview(clipElem) {
+    // Carga un clip en la vista previa; startTime es la posición local en el clip
+    function loadClipIntoPreview(clipElem, startTime) {
+      startTime = startTime || 0;
       var type = clipElem.dataset.fileType;
       var url = clipElem.dataset.fileURL;
       var previewVideo = document.getElementById("preview-video");
@@ -172,27 +186,60 @@
       previewImage.style.display = "none";
       previewCanvas.style.display = "none";
       
-      // Inicializa la posición de scrub (current time) en 0
-      clipElem.currentScrubTime = 0;
+      clipElem.currentScrubTime = startTime;
       
       if (type.startsWith("video/")) {
         previewVideo.src = url;
         previewVideo.style.display = "block";
         previewVideo.load();
         previewVideo.addEventListener("loadedmetadata", function() {
+          // La duración real se guarda en el clip (pero se respeta la posición en la secuencia)
           clipElem.dataset.duration = previewVideo.duration;
-          setNeedleTime(0);
+          setNeedleTime(getGlobalTimeFromClip(window.selectedClip, startTime));
         });
       } else if (type.startsWith("image/")) {
         previewImage.src = url;
         previewImage.style.display = "block";
-        setNeedleTime(0);
+        setNeedleTime(getGlobalTimeFromClip(window.selectedClip, startTime));
       } else if (type.startsWith("audio/")) {
         previewCanvas.style.display = "block";
-        setNeedleTime(0);
+        setNeedleTime(getGlobalTimeFromClip(window.selectedClip, startTime));
       }
     }
     
+    // Dada una secuencia de clips (ordenados en timeline-content) y la posición local en el clip seleccionado,
+    // calcula la posición global en la secuencia.
+    function getGlobalTimeFromClip(clipElem, localTime) {
+      var timelineContent = document.getElementById("timeline-content");
+      var clips = timelineContent.querySelectorAll(".track-clip");
+      var cumulative = 0;
+      for(var i=0; i < clips.length; i++){
+        if(clips[i] === clipElem){
+          return cumulative + localTime;
+        }
+        cumulative += parseFloat(clips[i].dataset.duration);
+      }
+      return cumulative;
+    }
+    
+    // Dada un tiempo global, identifica en qué clip se encuentra y cuál es la posición local
+    function getClipFromGlobalTime(globalTime) {
+      var timelineContent = document.getElementById("timeline-content");
+      var clips = timelineContent.querySelectorAll(".track-clip");
+      var cumulative = 0;
+      for(var i=0; i < clips.length; i++){
+        var duration = parseFloat(clips[i].dataset.duration);
+        if(globalTime >= cumulative && globalTime <= cumulative + duration){
+          return { clip: clips[i], localTime: globalTime - cumulative };
+        }
+        cumulative += duration;
+      }
+      return null;
+    }
+    
+    /****************************
+     * Función para ajustar (fit) la timeline
+     ****************************/
     function fitTimeline() {
       var timelineContainer = document.getElementById("timeline-container");
       var timelineContent = document.getElementById("timeline-content");
@@ -214,6 +261,9 @@
       drawTimeMarkers();
     }
     
+    /****************************
+     * Dibujar Marcas de Tiempo
+     ****************************/
     function drawTimeMarkers() {
       var timelineContainer = document.getElementById("timeline-container");
       var timelineContent = document.getElementById("timeline-content");
@@ -248,77 +298,74 @@
     }
     
     window.handleClipDrop = handleClipDrop;
-  </script>
-  
-  <!-- Script inline: Time Display Scrubber con Aguja Roja -->
-  <script>
-    "use strict";
     
-    // Configurar el time-display como un scrubber:
+    /****************************
+     * Time Display Scrubber y Aguja Roja
+     ****************************/
+     
     (function(){
       var timeDisplay = document.getElementById("time-display");
       var timeValue = document.getElementById("time-value");
       var needle = document.getElementById("time-needle");
-      // Aseguramos posición relativa para el contenedor, y absoluta para la aguja
-      timeDisplay.style.position = "relative";
-      needle.style.position = "absolute";
-      needle.style.width = "2px";
-      needle.style.height = "100%";
-      needle.style.backgroundColor = "red";
-      // Posición inicial de la aguja en 0
-      needle.style.left = "0px";
       
-      var isDragging = false, startX = 0, startTimeVal = 0;
+      // Posición inicial y estilos ya definidos en el CSS
+      var isDragging = false, startX = 0, startGlobalTime = 0;
       
       function getPPS() {
         var timelineContainer = document.getElementById("timeline-container");
         return parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
       }
       
-      // Obtiene el tiempo actual a partir de la posición de la aguja
-      function getNeedleTime() {
-        var left = needle.offsetLeft;
-        return left / getPPS();
-      }
-      
-      // Actualiza la posición de la aguja (y el texto) en función del nuevo tiempo
-      window.setNeedleTime = function(newTime) {
-        var newLeft = newTime * getPPS();
-        // Limitar dentro del ancho del contenedor time-display
-        var containerWidth = timeDisplay.clientWidth;
-        if(newLeft < 0) newLeft = 0;
-        if(newLeft > containerWidth) newLeft = containerWidth;
+      // Establece la posición de la aguja y sincroniza el preview según el tiempo global
+      window.setNeedleTime = function(newGlobalTime) {
+        var pps = getPPS();
+        var newLeft = newGlobalTime * pps;
         needle.style.left = newLeft + "px";
-        timeValue.textContent = "Tiempo actual: " + formatTime(newTime);
-        // Si hay clip seleccionado y es video, actualizar su currentTime
-        if(window.selectedClip && window.selectedClip.dataset.fileType.startsWith("video/")){
-          var previewVideo = document.getElementById("preview-video");
-          if(previewVideo) previewVideo.currentTime = newTime;
-          window.selectedClip.currentScrubTime = newTime;
+        timeValue.textContent = "Tiempo actual: " + formatTime(newGlobalTime);
+        
+        // Buscar el clip correspondiente a este tiempo global
+        var clipData = getClipFromGlobalTime(newGlobalTime);
+        if(clipData){
+          var clip = clipData.clip, localTime = clipData.localTime;
+          if(window.selectedClip !== clip){
+            var clips = document.querySelectorAll(".track-clip");
+            clips.forEach(function(c) { c.classList.remove("selected"); });
+            clip.classList.add("selected");
+            window.selectedClip = clip;
+            loadClipIntoPreview(clip, localTime);
+          } else {
+            window.selectedClip.currentScrubTime = localTime;
+            // Si es video, actualizar su currentTime
+            if(window.selectedClip.dataset.fileType.startsWith("video/")){
+              var previewVideo = document.getElementById("preview-video");
+              if(previewVideo) {
+                previewVideo.currentTime = localTime;
+              }
+            }
+          }
         }
       };
       
-      // Eventos para arrastrar la aguja
-      needle.addEventListener("mousedown", function(e){
+      // Arrastrar la aguja
+      needle.addEventListener("mousedown", function(e) {
         isDragging = true;
         startX = e.clientX;
-        startTimeVal = getNeedleTime();
-        e.stopPropagation();
+        // Obtener tiempo global actual de la aguja
+        startGlobalTime = needle.offsetLeft / getPPS();
         e.preventDefault();
       });
       
-      document.addEventListener("mousemove", function(e){
+      document.addEventListener("mousemove", function(e) {
         if(isDragging){
           var deltaX = e.clientX - startX;
           var deltaTime = deltaX / getPPS();
-          var newTime = startTimeVal + deltaTime;
-          // Si existe un clip seleccionado, limitar a su duración
-          if(window.selectedClip){
-            var clipDuration = parseFloat(window.selectedClip.dataset.duration) || 0;
-            if(newTime < 0) newTime = 0;
-            if(newTime > clipDuration) newTime = clipDuration;
-          }
-          setNeedleTime(newTime);
+          var newGlobalTime = startGlobalTime + deltaTime;
+          // Limitar al total de la secuencia
+          var timelineContent = document.getElementById("timeline-content");
+          var totalTime = timelineContent.scrollWidth / getPPS();
+          if(newGlobalTime < 0) newGlobalTime = 0;
+          if(newGlobalTime > totalTime) newGlobalTime = totalTime;
+          window.setNeedleTime(newGlobalTime);
         }
       });
       
@@ -326,44 +373,39 @@
         isDragging = false;
       });
       
-      // Permitir hacer clic en el time-display (fuera de la aguja) para reposicionar la aguja
-      timeDisplay.addEventListener("click", function(e){
-        // Evitar que se active si se hizo click en la aguja
+      // Permite hacer clic directamente en el time-display (fuera de la aguja)
+      timeDisplay.addEventListener("click", function(e) {
         if(e.target === needle) return;
         var rect = timeDisplay.getBoundingClientRect();
         var clickX = e.clientX - rect.left;
-        var newTime = clickX / getPPS();
-        if(window.selectedClip){
-          var clipDuration = parseFloat(window.selectedClip.dataset.duration) || 0;
-          if(newTime > clipDuration) newTime = clipDuration;
-        }
-        setNeedleTime(newTime);
+        var newGlobalTime = clickX / getPPS();
+        var timelineContent = document.getElementById("timeline-content");
+        var totalTime = timelineContent.scrollWidth / getPPS();
+        if(newGlobalTime > totalTime) newGlobalTime = totalTime;
+        window.setNeedleTime(newGlobalTime);
       });
+      
     })();
     
-    // Ahora, redefinimos los controles de reproducción para mover la aguja:
+    /****************************
+     * Controles de Reproducción Basados en el Scrubber
+     ****************************/
     (function(){
       var playbackInterval = null;
-      
       window.playbackLoop = function() {
-        if(playbackInterval) return; // evitar múltiples intervalos
+        if(playbackInterval) return;
         playbackInterval = setInterval(function(){
-          var currentTime = (function(){
-            var ns = document.getElementById("time-needle");
-            var pps = parseFloat(document.getElementById("timeline-container").getAttribute("data-pixels-per-second")) || 10;
-            return ns.offsetLeft / pps;
-          })();
+          var currentGlobalTime = document.getElementById("time-needle").offsetLeft / (parseFloat(document.getElementById("timeline-container").getAttribute("data-pixels-per-second")) || 10);
           var step = 1/30;
-          var newTime = currentTime + step;
-          if(window.selectedClip){
-            var clipDuration = parseFloat(window.selectedClip.dataset.duration) || 0;
-            if(newTime >= clipDuration) {
-              newTime = clipDuration;
-              clearInterval(playbackInterval);
-              playbackInterval = null;
-            }
+          var newGlobalTime = currentGlobalTime + step;
+          // Limitar al total de la secuencia
+          var totalTime = document.getElementById("timeline-content").scrollWidth / (parseFloat(document.getElementById("timeline-container").getAttribute("data-pixels-per-second")) || 10);
+          if(newGlobalTime >= totalTime) {
+            newGlobalTime = totalTime;
+            clearInterval(playbackInterval);
+            playbackInterval = null;
           }
-          window.setNeedleTime(newTime);
+          window.setNeedleTime(newGlobalTime);
         }, 33);
       };
       
@@ -380,25 +422,20 @@
       };
       
       window.stepFrames = function(direction) {
-        var currentTime = (function(){
-          var ns = document.getElementById("time-needle");
-          var pps = parseFloat(document.getElementById("timeline-container").getAttribute("data-pixels-per-second")) || 10;
-          return ns.offsetLeft / pps;
-        })();
+        var currentGlobalTime = document.getElementById("time-needle").offsetLeft / (parseFloat(document.getElementById("timeline-container").getAttribute("data-pixels-per-second")) || 10);
         var step = 1/30;
-        var newTime = currentTime + (direction * step);
-        if(newTime < 0) newTime = 0;
-        if(window.selectedClip){
-          var clipDuration = parseFloat(window.selectedClip.dataset.duration) || 0;
-          if(newTime > clipDuration) newTime = clipDuration;
-        }
-        window.setNeedleTime(newTime);
+        var newGlobalTime = currentGlobalTime + (direction * step);
+        if(newGlobalTime < 0) newGlobalTime = 0;
+        var totalTime = document.getElementById("timeline-content").scrollWidth / (parseFloat(document.getElementById("timeline-container").getAttribute("data-pixels-per-second")) || 10);
+        if(newGlobalTime > totalTime) newGlobalTime = totalTime;
+        window.setNeedleTime(newGlobalTime);
       };
-      
     })();
+    
+    window.fitTimeline = fitTimeline;
   </script>
   
-  <!-- Script inline: Función para redimensión de clips (sin cambios respecto a la versión anterior) -->
+  <!-- Script inline: Función de redimensión de clips (sin cambios mayores) -->
   <script>
     "use strict";
     (function(){
@@ -414,30 +451,26 @@
         document.addEventListener("mousemove", onClipResizeMove);
         document.addEventListener("mouseup", onClipResizeUp);
       }
-      
       function onClipResizeMove(event) {
         if(!currentClipResize) return;
         var deltaX = event.clientX - currentClipResize.startMouseX;
         var newWidth = currentClipResize.initialWidth + deltaX;
         if(newWidth < 30) newWidth = 30;
         currentClipResize.clipElement.style.width = newWidth + "px";
-        var timelineContainer = document.getElementById("timeline-container");
-        var pps = parseFloat(timelineContainer.getAttribute("data-pixels-per-second")) || 10;
+        var pps = parseFloat(document.getElementById("timeline-container").getAttribute("data-pixels-per-second")) || 10;
         var newDuration = newWidth / pps;
         currentClipResize.clipElement.dataset.duration = newDuration;
         if(currentClipResize.clipElement.classList.contains("selected")){
-          document.getElementById("time-value").textContent = "Tiempo actual: " + formatTime(newDuration);
           window.selectedClip.currentScrubTime = newDuration;
+          document.getElementById("time-value").textContent = "Tiempo actual: " + formatTime(newDuration);
         }
       }
-      
       function onClipResizeUp(event) {
         document.removeEventListener("mousemove", onClipResizeMove);
         document.removeEventListener("mouseup", onClipResizeUp);
         currentClipResize = null;
         drawTimeMarkers();
       }
-      
       window.startClipResize = startClipResize;
     })();
   </script>
